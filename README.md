@@ -145,4 +145,4 @@ Open an issue in the project repository for questions or bug reports.
 
 ## License
 
-No license has been specified. Contact the author at info@thomasvolk.de for terms of use.
+This project is licensed under the [Apache License 2.0](LICENSE).
