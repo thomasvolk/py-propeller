@@ -22,11 +22,11 @@ class StubTrack:
 
 @dataclasses.dataclass(frozen=True)
 class StubNote:
-    duration_beats: float
+    duration: float
     pitch: int
     velocity: int
 
 
 @dataclasses.dataclass(frozen=True)
 class StubRest(Rest):
-    duration_beats: float = 1.0
+    duration: float = 1.0

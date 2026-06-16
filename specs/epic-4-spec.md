@@ -8,9 +8,9 @@ the transport layer (Epic 2). The serializer has no socket I/O, no file I/O, and
 dependency on the transport or DSL layers. A minimal stub domain model (dataclasses) is defined
 alongside the tests to enable parallel development while Epic 3 is in progress.
 
-**Confidence Level:** 92% — All questions resolved; architecture, data model, and task table
-fully cover every F-x and AC-x. Residual 8%: Epic 1 integration risk — `propeller.notes.Rest`
-must expose a `duration_beats` attribute (confirmed only once Epic 1 is complete).
+**Confidence Level:** 100% — All questions resolved; architecture, data model, and task table
+fully cover every F-x and AC-x. Epic 1 integration confirmed: `propeller.notes.Rest` exposes
+`duration: float`; serializer uses `item.duration`.
 
 ---
 
@@ -36,7 +36,7 @@ for track in project.tracks:
     tick_cursor = 0
     notes_out   = []
     for item in track.notes:
-        duration_ticks = _beats_to_ticks(item.duration_beats)
+        duration_ticks = _beats_to_ticks(item.duration)
         if isinstance(item, Rest):   # rest — advance cursor only
             tick_cursor += duration_ticks
         else:                        # pitched note
@@ -76,8 +76,8 @@ Provides `@dataclass` types that mirror the Epic 3 domain model contract (F-15).
 - `StubProject` — fields: `bpm: int`, `time_signature: tuple[int, int]`, `bars: int`,
   `tracks: list`
 - `StubTrack` — fields: `name: str`, `channel: int`, `instrument: int`, `notes: list`
-- `StubNote` — fields: `duration_beats: float`, `pitch: int`, `velocity: int`
-- `StubRest(Rest)` — inherits from `propeller.notes.Rest`; field: `duration_beats: float`;
+- `StubNote` — fields: `duration: float`, `pitch: int`, `velocity: int`
+- `StubRest(Rest)` — inherits from `propeller.notes.Rest`; field: `duration: float`;
   passes `isinstance(item, Rest)` check in the serializer
 
 ---
@@ -87,13 +87,13 @@ Provides `@dataclass` types that mirror the Epic 3 domain model contract (F-15).
 | Type | Fields | Notes |
 |------|--------|-------|
 | `PPQN` | `int = 480` | Module-level constant in `propeller/serializer.py`. |
-| `Rest` | `duration_beats: float` (at minimum) | Defined in `propeller.notes` (Epic 1). Serializer imports via `from propeller.notes import Rest` and uses `isinstance`. |
+| `Rest` | `duration: float` (at minimum) | Defined in `propeller.notes` (Epic 1). Serializer imports via `from propeller.notes import Rest` and uses `isinstance`. |
 | `StubProject` | `bpm: int`, `time_signature: tuple[int,int]`, `bars: int`, `tracks: list` | Test stub; mirrors Epic 3 domain model (F-15). |
-| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is a flat list of `StubNote` / `StubRest` objects. |
-| `StubNote` | `duration_beats: float`, `pitch: int`, `velocity: int` | Pitched note stub. `isinstance(item, Rest)` is `False`. |
-| `StubRest` | `duration_beats: float` (inherits `Rest`) | Rest stub; `isinstance(item, Rest)` is `True`. |
+| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is a flat list of `StubNote` / `StubRest` objects. DSL channel is 0-indexed; serializer converts to 1-indexed for the engine. |
+| `StubNote` | `duration: float`, `pitch: int`, `velocity: int` | Pitched note stub. `isinstance(item, Rest)` is `False`. |
+| `StubRest` | `duration: float` (inherits `Rest`) | Rest stub; `isinstance(item, Rest)` is `True`. |
 | Output dict (header) | `bpm: int`, `loop_duration: int` | `loop_duration = project.bars × time_signature[0] × 480` (F-5). |
-| Output dict (track) | `name: str`, `channel: int`, `instrument: int`, `notes: list[list[int]]` | Each note entry is `[start_tick, duration_ticks, pitch, velocity]` (F-7, F-8). |
+| Output dict (track) | `name: str`, `channel: int`, `instrument: int`, `notes: list[list[int]]` | Each note entry is `[start_tick, duration_ticks, pitch, velocity]` (F-7, F-8). `channel` is 1-indexed (DSL value + 1) to match engine expectation (1–16). |
 
 ---
 
@@ -113,12 +113,12 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | I-4  | Compute and populate `header["loop_duration"] = project.bars * project.time_signature[0] * PPQN` | impl | F-5 | T-4 |
 | T-5  | Test: `result["tracks"]` has one entry per track; each entry has keys `"name"`, `"channel"`, `"instrument"`, `"notes"`; values match track fields (AC-6, F-6, F-7) | test | AC-6, F-6, F-7 | I-4 |
 | I-5  | Implement `_serialize_track(track)` returning `{"name": …, "channel": …, "instrument": …, "notes": []}` and build `result["tracks"]` via list comprehension | impl | F-6, F-7 | T-5 |
-| T-6  | Test: a single `StubNote(duration_beats=2, pitch=60, velocity=80)` maps to `[0, 960, 60, 80]` (AC-7, F-8) | test | AC-7, F-8, F-10 | I-5 |
+| T-6  | Test: a single `StubNote(duration=2, pitch=60, velocity=80)` maps to `[0, 960, 60, 80]` (AC-7, F-8) | test | AC-7, F-8, F-10 | I-5 |
 | T-7  | Test: two consecutive quarter-note `StubNote` objects give `start_tick` 0 and 480 respectively (AC-4, F-9) | test | AC-4, F-9 | I-5 |
 | I-6  | Implement tick accumulation in `_serialize_track`: `start_tick` is cumulative sum of preceding durations; call `_beats_to_ticks`; append `[start_tick, duration_ticks, pitch, velocity]` per pitched note | impl | F-8, F-9, F-10 | T-6, T-7 |
-| T-8  | Test: a `StubRest(duration_beats=1)` followed by a `StubNote` quarter note yields exactly one entry in `notes` with `start_tick == 480` (AC-5, F-11) | test | AC-5, F-11 | I-6 |
+| T-8  | Test: a `StubRest(duration=1)` followed by a `StubNote` quarter note yields exactly one entry in `notes` with `start_tick == 480` (AC-5, F-11) | test | AC-5, F-11 | I-6 |
 | I-7  | Add rest branch in `_serialize_track`: `if isinstance(item, Rest)`, advance `tick_cursor` but do not append to `notes_out` | impl | F-11 | T-8 |
-| T-9  | Test: `StubNote(duration_beats=1/3)` yields `duration_ticks == round(1/3 * 480) == 160`; no exception raised (AC-10, F-12) | test | AC-10, F-12 | I-7 |
+| T-9  | Test: `StubNote(duration=1/3)` yields `duration_ticks == round(1/3 * 480) == 160`; no exception raised (AC-10, F-12) | test | AC-10, F-12 | I-7 |
 | I-8  | Implement `_beats_to_ticks(beats: float) -> int` using `round(beats * PPQN)`; use it in all tick computations | impl | F-10, F-12 | T-9 |
 | T-10 | Test: `import propeller.serializer` succeeds in a subprocess with no socket, no engine running; module is callable (AC-8, F-13, F-14, NF-2, NF-3) | test | AC-8, F-13, F-14, NF-2, NF-3 | I-2 |
 

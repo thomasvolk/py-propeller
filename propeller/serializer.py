@@ -11,7 +11,7 @@ def _serialize_track(track) -> dict:
     tick_cursor = 0
     notes_out = []
     for item in track.notes:
-        duration_ticks = _beats_to_ticks(item.duration_beats)
+        duration_ticks = _beats_to_ticks(item.duration)
         if isinstance(item, Rest):
             tick_cursor += duration_ticks
         else:
@@ -19,7 +19,7 @@ def _serialize_track(track) -> dict:
             tick_cursor += duration_ticks
     return {
         'name': track.name,
-        'channel': track.channel,
+        'channel': track.channel + 1,
         'instrument': track.instrument,
         'notes': notes_out,
     }
