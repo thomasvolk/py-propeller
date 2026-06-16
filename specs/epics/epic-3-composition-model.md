@@ -2,9 +2,22 @@
 
 ## Overview
 
-Epic 3 defines the `track()` and `project()` domain objects that assemble note primitives (produced by Epic 1) into a full musical piece. These two factory functions form the compositional backbone of the py-propeller DSL: `track()` groups bars of notes under a named MIDI voice, and `project()` binds one or more tracks together with global playback parameters (BPM and time signature). The resulting objects are pure in-memory Python values with no I/O dependencies, ready to be serialized by Epic 4 and transmitted by Epic 5.
+Epic 3 defines the `track()` and `project()` domain objects that assemble note primitives
+(produced by Epic 1) into a full musical piece. `track()` groups a flat, ordered sequence of
+notes and rests under a named MIDI voice. `project()` binds one or more tracks together with
+global playback parameters (BPM, time signature, and bar count). The resulting objects are pure
+in-memory Python values with no I/O dependencies, ready to be serialized by Epic 4 and
+transmitted by Epic 5.
 
-**Confidence Level:** 92% — All core requirements, validation contracts, empty-collection semantics, and immutability policy are fully resolved. Minor residual vagueness: `bpm` is typed as "numeric" without pinning int vs float, and `time_signature` has no validation depth beyond shape (e.g., denominator as power of 2). Both are implementation-time decisions.
+The track structure has changed relative to the original briefing: a track now carries a flat
+`notes=[]` list instead of a `bars=[[…]]` list-of-lists. The project retains an explicit
+`bars=N` count that drives the loop length; however, bars as a structural grouping of notes
+within a track have been removed.
+
+**Confidence Level:** 87% — All structural changes are reconciled. One gap remains (Q8):
+F-12 states that validation error messages include note position "where applicable", but does
+not specify what `track()` validates about its `notes` list during construction. Epic 6 F-9
+assumes this traversal happens; Epic 3 needs to define its scope.
 
 ---
 
@@ -12,15 +25,24 @@ Epic 3 defines the `track()` and `project()` domain objects that assemble note p
 
 ### UJ-1 · Composer builds a single-track project
 
-A developer imports `project` and `track` from `propeller`. They construct bars as lists of note primitives from Epic 1 (e.g., `[C4 * 2, D4 * 0.5, E4]`), pass those bars to `track()` along with a name, MIDI channel, and instrument number, then wrap the track in a `project()` call with BPM and time signature. The result is a Python object ready for further processing.
+A developer imports `project` and `track` from `propeller`. They construct a flat list of note
+primitives from Epic 1 (e.g., `[C4(120) * 2, D4() * 0.5, E4()]`) and pass it to `track()`
+along with a name, MIDI channel, and instrument number. They then wrap the track in a
+`project()` call with BPM, time signature, and a bar count. The result is a Python object
+ready for further processing.
 
 ### UJ-2 · Composer assembles a multi-track project
 
-A developer creates several `track()` objects, each with a different name, channel, and instrument. They combine them in a single `project()` call. The project object holds all tracks and global playback parameters in a single inspectable value.
+A developer creates several `track()` objects, each with a different name, channel, and
+instrument. They combine them in a single `project()` call. The project object holds all
+tracks and global playback parameters in a single inspectable value.
 
 ### UJ-3 · Composer inspects the composition structure programmatically
 
-After construction, a developer accesses attributes directly — `p.bpm`, `p.tracks[0].name`, `p.tracks[0].bars[1]` — to verify the structure or to drive downstream logic (e.g., a test assertion or a custom serializer). No special API is required: standard Python attribute access is sufficient.
+After construction, a developer accesses attributes directly — `p.bpm`, `p.bars`,
+`p.tracks[0].name`, `p.tracks[0].notes[0]` — to verify the structure or to drive downstream
+logic (e.g., a test assertion or a custom serializer). No special API is required: standard
+Python attribute access is sufficient.
 
 ---
 
@@ -28,20 +50,19 @@ After construction, a developer accesses attributes directly — `p.bpm`, `p.tra
 
 | ID   | Requirement |
 |------|-------------|
-| F-1  | `track()` accepts keyword arguments `name` (str), `channel` (int), `instrument` (int), and `bars` (list of bars). |
-| F-2  | Each bar passed to `track()` is an ordered list of note primitive values (Note or Rest instances) as produced by the Epic 1 DSL. |
-| F-3  | `project()` accepts keyword arguments `bpm` (numeric), `time_signature` (2-tuple of ints, e.g. `(4, 4)`), and `tracks` (list of track objects). |
-| F-4  | The return value of `track()` exposes all its arguments as readable Python attributes: `.name`, `.channel`, `.instrument`, `.bars`. |
-| F-5  | The return value of `project()` exposes all its arguments as readable Python attributes: `.bpm`, `.time_signature`, `.tracks`. |
-| F-6  | Individual bars within a track are accessible by index from the track object (e.g., `t.bars[0]`). |
-| F-7  | `track` and `project` are importable from the top-level `propeller` package: `from propeller import project, track`. |
-| F-8  | Domain objects are implemented as `@dataclass(frozen=True)` classes — immutable Python dataclasses with no hidden magic and no external dependencies. |
-| F-9  | The `channel` parameter uses 0-indexed numbering (0–15), matching the raw MIDI wire protocol. |
-| F-10 | `track()` raises `PropellerValidationError` immediately on construction if `channel` is outside 0–15 or `instrument` is outside 0–127. |
-| F-11 | `project()` raises `PropellerValidationError` immediately on construction if `bpm` is not positive. An empty `tracks=[]` list is valid. |
-| F-12 | `PropellerValidationError` is a subclass of `PropellerError`, which is the base exception for the library. |
-| F-13 | Validation error messages include bar index and note position where applicable to give precise context. |
-| F-14 | `track(bars=[])`, an empty individual bar `[]`, and `project(tracks=[])` are all valid — empty compositions are not errors. |
+| F-1  | `track()` accepts keyword arguments `name` (str), `channel` (int), `instrument` (int), and `notes` (flat list of Note or Rest instances as produced by the Epic 1 DSL). |
+| F-2  | `project()` accepts keyword arguments `bpm` (numeric), `time_signature` (2-tuple of ints, e.g. `(4, 4)`), `bars` (positive integer — the loop length in bars), and `tracks` (list of track objects). |
+| F-3  | The return value of `track()` exposes all its arguments as readable Python attributes: `.name`, `.channel`, `.instrument`, `.notes`. |
+| F-4  | The return value of `project()` exposes all its arguments as readable Python attributes: `.bpm`, `.time_signature`, `.bars`, `.tracks`. |
+| F-5  | Individual notes within a track are accessible by index from the track object (e.g., `t.notes[0]`). |
+| F-6  | `track` and `project` are importable from the top-level `propeller` package: `from propeller import project, track`. |
+| F-7  | Domain objects are implemented as `@dataclass(frozen=True)` classes — immutable Python dataclasses with no hidden magic and no external dependencies. |
+| F-8  | The `channel` parameter uses 0-indexed numbering (0–15), matching the raw MIDI wire protocol. |
+| F-9  | `track()` raises `PropellerValidationError` immediately on construction if `channel` is outside 0–15 or `instrument` is outside 0–127. |
+| F-10 | `project()` raises `PropellerValidationError` immediately on construction if `bpm` is not positive, or if `bars` is not a positive integer. An empty `tracks=[]` list is valid. |
+| F-11 | `PropellerValidationError` is a subclass of `PropellerError`, which is the base exception for the library. |
+| F-12 | When `track()` constructs, it iterates its `notes` list. If it encounters an element that is not a valid Note or Rest instance, it raises `PropellerValidationError` with a 1-based position index. *(Exact scope of "valid" — type-only check vs value-range check — is pending Q8.)* |
+| F-13 | `track(notes=[])` and `project(tracks=[])` are both valid — empty compositions are not errors. |
 
 ---
 
@@ -59,17 +80,17 @@ After construction, a developer accesses attributes directly — `p.bpm`, `p.tra
 
 | ID    | Given | When | Then |
 |-------|-------|------|------|
-| AC-1  | Note primitives `C4`, `D4`, `E4`, `F4` from Epic 1 are available | `track(name="Piano", channel=2, instrument=0, bars=[[C4, D4], [E4, F4]])` is called | The returned object has `.name == "Piano"`, `.channel == 2`, `.instrument == 0`, and `.bars` has length 2 |
-| AC-2  | A track object `t` exists | `project(bpm=120, time_signature=(4, 4), tracks=[t])` is called | The returned object has `.bpm == 120`, `.time_signature == (4, 4)`, and `.tracks == [t]` |
+| AC-1  | Note primitives `C4`, `D4`, `E4`, `F4` from Epic 1 are available | `track(name="Piano", channel=2, instrument=0, notes=[C4, D4, E4, F4])` is called | The returned object has `.name == "Piano"`, `.channel == 2`, `.instrument == 0`, and `.notes` has length 4 |
+| AC-2  | A track object `t` exists | `project(bpm=120, time_signature=(4, 4), bars=2, tracks=[t])` is called | The returned object has `.bpm == 120`, `.time_signature == (4, 4)`, `.bars == 2`, and `.tracks == [t]` |
 | AC-3  | A project `p` with at least one track is constructed | `p.tracks[0].name` is accessed | The track name is returned without error |
 | AC-4  | A project `p` is constructed | `repr(p)` is evaluated | The output is a non-empty human-readable string that reflects the project's key structure |
 | AC-5  | `from propeller import project, track` is executed in a clean environment | Both names are used to construct a valid project | No import error is raised and both callables work as specified |
 | AC-6  | `track()` is called with `channel=16` | Construction is attempted | `PropellerValidationError` is raised immediately |
 | AC-7  | `track()` is called with `instrument=128` | Construction is attempted | `PropellerValidationError` is raised immediately |
 | AC-8  | `project()` is called with `bpm=0` | Construction is attempted | `PropellerValidationError` is raised immediately |
-| AC-9  | `PropellerValidationError` is raised | The exception is inspected | It is a subclass of `PropellerError` and its message is a non-empty descriptive string |
-| AC-10 | `track()` is called with `bars=[]` | Construction completes | No error is raised; `.bars` is an empty list |
-| AC-11 | `track()` is called with `bars=[[]]` (one empty bar) | Construction completes | No error is raised; `.bars[0]` is an empty list |
+| AC-9  | `project()` is called with `bars=0` | Construction is attempted | `PropellerValidationError` is raised immediately |
+| AC-10 | `PropellerValidationError` is raised | The exception is inspected | It is a subclass of `PropellerError` and its message is a non-empty descriptive string |
+| AC-11 | `track()` is called with `notes=[]` | Construction completes | No error is raised; `.notes` is an empty list |
 | AC-12 | `project()` is called with `tracks=[]` | Construction completes | No error is raised; `.tracks` is an empty list |
 | AC-13 | A `Track` object `t` is constructed | `t.name = "Other"` is attempted | `FrozenInstanceError` is raised, confirming immutability |
 | AC-14 | A `Project` object `p` is constructed | `p.bpm = 200` is attempted | `FrozenInstanceError` is raised, confirming immutability |
@@ -78,7 +99,17 @@ After construction, a developer accesses attributes directly — `p.bpm`, `p.tra
 
 ## Open Questions
 
-No open questions — all gaps resolved through Cycle 3.
+### Q8 · Scope of track()-level notes validation
+
+`track()` iterates its `notes` list during construction (implied by F-12 and Epic 6 F-9).
+What exactly does it validate about each element?
+
+**Options**
+- A. Type-only check: each element must be a Note or Rest instance; value ranges (velocity, pitch) are trusted as already validated by Epic 1 at note-creation time. *(recommended — keeps validation layered: Epic 1 owns note correctness, track() owns structural correctness; avoids duplicating range checks that Epic 1 already performs at the point of authoring)*
+- B. Type and value check: each element must be a Note or Rest instance AND its pitch and velocity must be within valid MIDI ranges; raises with 1-based position on any failure.
+- C. No validation: `track()` does not inspect its `notes` list at all; the list is stored as-is.
+
+**Answer:** A.
 
 ---
 
@@ -94,4 +125,28 @@ No open questions — all gaps resolved through Cycle 3.
 
 ### Cycle 3 — Confidence: 92%
 - Reconciled: Q5 → F-11 updated (empty `tracks=[]` valid), F-14 added (all empty collections valid), AC-10, AC-11, AC-12 added; Q6 → F-8 updated (`frozen=True`), NF-3 added (immutability contract), AC-13, AC-14 added
-- Added: none — PRD is complete
+- Added: none — PRD was complete
+
+### Cycle 4 — Confidence: 55%
+- Context: briefing.md updated to drop bar grouping within tracks.
+- `track()` parameter renamed from `bars` to `notes`; type changed from list-of-lists to flat list of Note/Rest.
+- `project()` `bars` parameter removed; `time_signature` retained.
+- All UJs, FRs, and ACs updated to reflect flat `notes` structure.
+- F-12 updated: validation error messages reference note position in flat list (not bar+position).
+- Added: Q7 (loop length derivation without bars parameter on project)
+
+### Cycle 5 — Confidence: 88%
+- Reconciled: Q7-C → `bars=N` restored on `project()` as an explicit loop-length parameter.
+  - F-2 updated: `project()` accepts `bars` (positive integer) alongside bpm, time_signature, tracks.
+  - F-4 updated: `.bars` added to project readable attributes.
+  - F-10 updated: `bars ≤ 0` raises `PropellerValidationError`.
+  - AC-2 updated: project AC now asserts `.bars == 2`.
+  - AC-9 added: `project(bars=0)` raises `PropellerValidationError`.
+  - AC-10–AC-14 renumbered accordingly.
+- Note: `bars` on `project()` is a loop-length count; `notes` on `track()` remains a flat list.
+- All open questions resolved.
+
+### Cycle 6 — Confidence: 87%
+- Reconciled: nothing (no answered questions)
+- Gap identified: F-12 stated validation error messages include note position "where applicable" without specifying what track() validates about its notes list. F-12 tightened to name the type-check behaviour explicitly (pending Q8 resolution).
+- Added: Q8 (scope of track()-level notes validation: type-only vs type+value vs none)

@@ -9,13 +9,7 @@ note primitives (pitch, duration, velocity), composition objects (`track()` and
 `project()`), and the connection lifecycle (socket failures translated into
 human-readable diagnostics).
 
-**Confidence Level:** 95% — All seven open questions answered and reconciled. Two-layer
-validation model is fully specified (operator-time guards without position context;
-`track()` traversal with 1-based bar/position context). Exception hierarchy is
-defined (`PropellerError` base, `PropellerValidationError`, `PropellerConnectionError`).
-`PropellerResponseError` is explicitly out of scope. All 13 ACs are concrete and
-individually testable. One minor edge case (empty inner bar list) is covered by F-4
-but has no dedicated AC — acceptable at this confidence level.
+**Confidence Level:** 95% — All questions resolved. Every requirement is concrete and individually testable; the exception hierarchy is fully defined; no open ambiguities remain.
 
 ---
 
@@ -24,13 +18,9 @@ but has no dedicated AC — acceptable at this confidence level.
 ### UJ-1 · Invalid note value caught at the point of authoring
 
 A musician writes a DSL script and accidentally constructs a note with an
-out-of-range velocity (e.g. `C4 + 200`). When they run the script, Python raises
-a `PropellerValidationError` immediately — before any serialization or network
-activity — with a message such as:
-
-> `Velocity out of range: 300 (must be 0–127). Note: C4, field: velocity`
-
-The musician corrects the value and reruns.
+out-of-range velocity (e.g. `C4(200)`). When they run the script, Python raises a
+`PropellerValidationError` immediately — before any serialization or network
+activity — with a clear message identifying the offending value and field.
 
 ### UJ-2 · Invalid track or project structure caught before playback
 
@@ -50,15 +40,15 @@ with the socket path and a suggestion to verify the engine is running.
 
 | ID  | Requirement |
 |-----|-------------|
-| F-1 | Note primitive operators (`*`, `+`, `-`) validate their argument at the point of application and raise `PropellerValidationError` if the resulting duration or velocity would be out of range. Operator-time error messages do NOT include bar or position context (that context does not exist at operator call time). |
+| F-1 | The `*` duration operator validates its argument at the point of application and raises `PropellerValidationError` if the resulting duration would be non-positive. Operator-time error messages do NOT include note position context. |
 | F-2 | Duration (`* beats`) must be a positive number (> 0); non-positive or non-numeric values raise `PropellerValidationError`. |
-| F-3 | Velocity after `+`/`-` must remain in the MIDI range 0–127; out-of-range results raise `PropellerValidationError`. |
+| F-3 | When `C4(velocity)` is called with a velocity outside [0, 127], `PropellerValidationError` is raised immediately with a message naming the field (`velocity`) and the offending value. |
 | F-4 | `track()` validates at construction time: `name` is a non-empty string; `channel` is an integer in the range 0–15 (0-indexed MIDI channel); `instrument` is an integer 0–127. |
-| F-5 | `project()` validates at construction time: `bpm` is a positive number; `time_signature` is a two-element tuple of positive integers. |
+| F-5 | `project()` validates at construction time: `bpm` is a positive number; `bars` is a positive integer; `time_signature` is a two-element tuple of positive integers. |
 | F-6 | Validation errors raised by `track()` and `project()` occur at construction time — before `.play()` opens any socket connection. |
 | F-7 | Socket connection failures (refused, timeout, unreachable) are caught inside `.play()` and re-raised as `PropellerConnectionError` with a message that includes the socket path and a suggestion to verify the engine is running. |
 | F-8 | Raw low-level exceptions (`socket.error`, `OSError`, `ConnectionRefusedError`, etc.) must not propagate to the user unhandled; they may appear only as the `__cause__` of a `PropellerConnectionError`. |
-| F-9 | When `track()` iterates its `bars` list during construction and encounters a note with an invalid value, the error message must include the bar index and the note's position within that bar using 1-based indices (e.g. `"Invalid velocity in bar 2, position 3: value 150 exceeds maximum 127"`). |
+| F-9 | When `track()` iterates its `notes` list during construction and encounters a note with an invalid value, the error message must include the note's position within the flat `notes` list using a 1-based index (e.g. `"Invalid velocity at position 3: value 150 exceeds maximum 127"`). There is no bar-index context since bar grouping within tracks has been removed from the DSL. |
 | F-10 | The library defines `PropellerError` as its base exception class. `PropellerValidationError` (DSL/structural errors) and `PropellerConnectionError` (transport errors) are subclasses, allowing callers to catch all library errors with a single `except PropellerError` clause. `PropellerResponseError` is out of scope for Epic 6. |
 
 ---
@@ -77,24 +67,19 @@ with the socket path and a suggestion to verify the engine is running.
 
 | ID    | Given | When | Then |
 |-------|-------|------|------|
-| AC-1  | A note modifier (`+` or `-`) would produce a velocity outside 0–127 | The modifier expression is evaluated | `PropellerValidationError` is raised with a message naming the note, the field (`velocity`), the offending value, and the valid range; no bar or position context is included |
-| AC-2  | A note modifier (`*`) would produce a duration ≤ 0 | The modifier expression is evaluated | `PropellerValidationError` is raised with a message naming the note, the field (`duration`), and the requirement that it must be positive; no bar or position context is included |
+| AC-1  | A note constructor is called with a velocity outside [0, 127] | `C4(200)` or `C4(-5)` is evaluated | `PropellerValidationError` is raised immediately with a message naming the field `velocity` and the offending value |
+| AC-2  | A note modifier (`*`) would produce a duration ≤ 0 | The modifier expression is evaluated | `PropellerValidationError` is raised with a message naming the note, the field (`duration`), and the requirement that it must be positive; no position context is included |
 | AC-3  | `track()` is called with `channel` outside 0–15 | `track()` is called | `PropellerValidationError` is raised naming the field `channel` and the offending value |
 | AC-4  | `track()` is called with `instrument` outside 0–127 | `track()` is called | `PropellerValidationError` is raised naming the field `instrument` and the offending value |
 | AC-5  | `track()` is called with an empty `name` string | `track()` is called | `PropellerValidationError` is raised naming the field `name` |
 | AC-6  | `project()` is called with `bpm` ≤ 0 | `project()` is called | `PropellerValidationError` is raised naming the field `bpm` |
-| AC-7  | `project()` is called with a `time_signature` that is not a two-element tuple of positive integers | `project()` is called | `PropellerValidationError` is raised naming the field `time_signature` |
-| AC-8  | A valid DSL project is built but the engine is not reachable | `.play()` is called | `PropellerConnectionError` is raised with a message containing the socket path and an actionable suggestion; the raw socket exception is accessible as `__cause__` |
-| AC-9  | Any validation error is raised by `track()` or `project()` | `.play()` is subsequently not called | No socket connection is ever attempted |
-| AC-10 | `track()` iterates its bars list and encounters a note with an out-of-range value | `track()` is called | `PropellerValidationError` is raised and the message includes the bar index and note position within that bar, both expressed as 1-based integers (e.g. "bar 2, position 3") |
-| AC-11 | `PropellerValidationError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerValidationError` is a subclass of `PropellerError` |
-| AC-12 | `PropellerConnectionError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerConnectionError` is a subclass of `PropellerError` |
-
----
-
-## Open Questions
-
-*All questions resolved. No open questions remain.*
+| AC-7  | `project()` is called with `bars` ≤ 0 | `project()` is called | `PropellerValidationError` is raised naming the field `bars` |
+| AC-8  | `project()` is called with a `time_signature` that is not a two-element tuple of positive integers | `project()` is called | `PropellerValidationError` is raised naming the field `time_signature` |
+| AC-9  | A valid DSL project is built but the engine is not reachable | `.play()` is called | `PropellerConnectionError` is raised with a message containing the socket path and an actionable suggestion; the raw socket exception is accessible as `__cause__` |
+| AC-10 | Any validation error is raised by `track()` or `project()` | `.play()` is subsequently not called | No socket connection is ever attempted |
+| AC-11 | `track()` iterates its `notes` list and encounters a note with an out-of-range value | `track()` is called | `PropellerValidationError` is raised and the message includes the note's 1-based position in the flat `notes` list (e.g. "position 3") — no bar index is included |
+| AC-12 | `PropellerValidationError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerValidationError` is a subclass of `PropellerError` |
+| AC-13 | `PropellerConnectionError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerConnectionError` is a subclass of `PropellerError` |
 
 ---
 
@@ -111,6 +96,30 @@ with the socket path and a suggestion to verify the engine is running.
 ### Cycle 3 — Confidence: 95%
 - Reconciled Q5 → F-1 (operator-time guards raise without bar/position context), F-9 (track() is the sole source of bar/position-enriched messages), AC-1, AC-2 (no position context in operator errors), AC-10 (track() provides bar/position context)
 - Reconciled Q6 → F-9 (1-based indices), AC-10 (1-based indices, example updated)
-- Reconciled Q7 → F-10 (PropellerResponseError removed from Epic 6 scope), NF-2 (PropellerResponseError removed), scope note added clarifying it belongs to Epic 2/Epic 5
-- Fixed: F-4 and F-7 updated to reference socket path (not host/port), AC-8 updated to reference socket path; parameter name updated from `notes` to `bars` to match Epic 3 decision
+- Reconciled Q7 → F-10 (PropellerResponseError removed from Epic 6 scope), NF-2 (PropellerResponseError removed)
+- Fixed: F-4 and F-7 updated to reference socket path; parameter name updated from `notes` to `bars` to match Epic 3
 - All open questions resolved
+
+### Cycle 4 — Confidence: 75%
+- Context: briefing.md updated to drop bars concept; `track()` takes flat `notes=[]`.
+- F-9 updated: bar-index removed from error messages; position in flat notes list (1-based) only.
+- AC-10 updated: "position 3" replaces "bar 2, position 3".
+- F-1 and F-3 flagged as pending Epic 1 Q5; AC-1 flagged pending Q5.
+- Added: Q8 (constructor-arg velocity validation, blocked on Epic 1 Q5)
+
+### Cycle 5 — Confidence: 82%
+- Reconciled: Epic 1 Q5-A → `+`/`-` velocity operators removed from the language.
+  - F-1 updated: only `*` duration operator remains; `+`/`-` references removed.
+  - F-3 updated: replaced `+`/`-` velocity range check with constructor-arg velocity placeholder (pending Q6).
+  - AC-1 updated: replaced `+`/`-` AC with constructor-arg out-of-range placeholder (pending Q6).
+- Reconciled: Epic 3 Q7-C → `bars=N` restored on `project()`.
+  - F-5 updated: `bars` positive integer added to `project()` validation.
+  - AC-7 added: `project(bars=0)` raises `PropellerValidationError`.
+  - AC-8 (old: time_signature) renumbered to AC-8; new bars AC inserted as AC-7.
+  - All subsequent ACs renumbered.
+- Q8 updated: unblocked from Epic 1 Q5 (now answered); still blocked on Epic 1 Q6.
+
+### Cycle 6 — Confidence: 95%
+- Reconciled: Q8-A → F-3 (raise `PropellerValidationError` immediately on out-of-range velocity), AC-1 (concrete Given/When/Then; clamping option removed)
+- Removed: Q8 (fully resolved); UJ-1 pending note removed
+- No open questions remain; PRD is complete
