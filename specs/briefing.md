@@ -55,10 +55,41 @@ When you call the `.play()` method on the project, it will transform the project
 python my_project.py
 ```
 
-The execution of the script will block until you stop it, so you can keep it running in the background while you edit the file.
+By default the execution of the script will block until you stop it, so you can keep it running in the background while you edit the file.
 
+### Non-blocking mode
+
+The script can also be executed in non-blocking mode by using the state `-s` parameter.
+This parameter has two values:
+- active: create or modify a project and start the loop
+- inactive: stop the loop
+
+The state parameter has no effect on the dry run mode
+
+**What non-blocking means**: When calling the script with the `-s` parameter, the script sends its commands to the propeller engine and exits immediately!
+
+#### State active:
+
+If no project is present, the propellers `create-project` command will be executed and the loop will be started.
+If a project is present, the propellers `modify-project` command will be executed and the loop will be started.
+
+Example:
 ```
-python my_project.py
+python my_project.py -s active
+```
+
+If a project is present can be find out with the propellers `status` command.
+Response:
+
+    {"status":"ok","project_present":true,...}
+
+#### State inactive:
+
+This state sends a `loop-stop` command to the propeller engine.
+
+Example:
+```
+python my_project.py -s inactive
 ```
 
 ## Dry run

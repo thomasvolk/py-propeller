@@ -85,6 +85,7 @@ environment variable at import time; falls back to `/tmp/propeller.sock` (F-2).
 
 **`TransportProtocol`** — `@runtime_checkable` `typing.Protocol` (D-1) exposing:
 - `send(self, payload: str) -> None`
+- `query(self, payload: str) -> dict`
 - `__enter__(self) -> TransportProtocol`
 - `__exit__(self, *args) -> None`
 
@@ -96,6 +97,9 @@ environment variable at import time; falls back to `/tmp/propeller.sock` (F-2).
 - `send(self, payload: str) -> None` — full connection lifecycle per call; returns `None` on
   success; raises `PropellerResponseError` on engine error; raises `PropellerConnectionError` on
   OS-level failure (F-3, F-4, F-5, F-6, F-7, F-9, F-11).
+- `query(self, payload: str) -> dict` — identical connection lifecycle to `send()`; on
+  `"status":"ok"` returns the full parsed response dict instead of `None`; raises the same
+  exceptions as `send()` on error or connection failure (F-13, AC-14, AC-15, AC-16).
 - `__enter__ / __exit__` — no-op wrapper; `__exit__` does not suppress exceptions (F-10).
 
 ---
@@ -107,7 +111,7 @@ environment variable at import time; falls back to `/tmp/propeller.sock` (F-2).
 | `PropellerConnectionError` | — (inherits `args` from `Exception`) | Subclass of `PropellerError`. Original `OSError` accessible via `.__cause__`. |
 | `PropellerResponseError` | `code: str` | Subclass of `PropellerError`. `code` set from engine's `"code"` field. |
 | `DEFAULT_SOCKET_PATH` | `str` | Module-level constant in `transport.py`. Resolved once at import time. |
-| `TransportProtocol` | — | `@runtime_checkable` `typing.Protocol` with `send`, `__enter__`, `__exit__`. |
+| `TransportProtocol` | — | `@runtime_checkable` `typing.Protocol` with `send`, `query`, `__enter__`, `__exit__`. |
 | `PropellerClient` | — | Stateless; no instance fields. Satisfies `TransportProtocol` structurally. |
 
 ---
@@ -138,6 +142,9 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | T-11 | Test: via `mock.patch('socket.socket')`, verify the mock socket context manager is entered and exited after a successful cycle, after a `PropellerResponseError`, and when `connect` raises — confirming no fd leak on any path | test | F-7, NF-3, AC-6, AC-7 | I-5, I-6, I-7 |
 | I-8  | Ensure `send()` wraps the entire socket lifecycle in `with socket.socket(AF_UNIX, SOCK_STREAM) as sock:` so the OS closes the fd on every code path | impl | NF-3 | T-11 |
 | T-12 | Test: static inspection of `propeller/transport.py` imports — no symbol from `propeller.notes` or any other propeller DSL module appears | test | F-8, NF-1, AC-8 | I-2 |
+| T-13 | Test: via `mock.patch('socket.socket')` with `recv.side_effect = [b'{"status": "ok", "project_present": true}', b""]`, verify `query(payload)` returns `{"status": "ok", "project_present": True}` | test | F-13, AC-14 | I-5 |
+| T-14 | Test: via `mock.patch('socket.socket')` with `recv.side_effect = [b'{"status": "error", "code": "no_project"}', b""]`, verify `query()` raises `PropellerResponseError` with `.code == "no_project"` | test | F-13, AC-15 | I-5 |
+| I-9 | Add `PropellerClient.query(self, payload: str) -> dict` — same socket lifecycle as `send()` but returns the full response dict on `"status":"ok"` instead of `None`; add `query` to `TransportProtocol` | impl | F-13 | T-13, T-14 |
 
 ---
 
@@ -167,3 +174,6 @@ None — all decisions resolved.
 - Reconciled: Q-1 → A (mock.patch strategy); Architecture Overview updated with mock pattern; T-7, T-8, T-9, T-10, T-11 updated with explicit patch/side-effect wording
 - Reconciled: D-1 → A (typing.Protocol + @runtime_checkable); Architecture Overview, Components, Data Model, I-3, T-4 updated to reflect structural Protocol
 - No open questions or decisions remain
+
+### Cycle 4 — Confidence: 92%
+- Reconciled: Epic 5 non-blocking mode requires reading the `status` response body — `query()` method added to `PropellerClient` and `TransportProtocol`; F-13, AC-14/15/16 propagated from PRD; T-13, T-14, I-9 added; `send()` contract unchanged

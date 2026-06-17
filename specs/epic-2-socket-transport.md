@@ -40,6 +40,7 @@ The developer runs their script but the propeller-engine daemon is not running. 
 | F-10 | `PropellerClient` supports the context manager protocol (`__enter__` / `__exit__`) so it can be used in a `with` statement. |
 | F-11 | `PropellerClient.send()` returns `None` on a successful `"status":"ok"` response. |
 | F-12 | `PropellerClient()` takes **no constructor arguments**. The socket path used is always `DEFAULT_SOCKET_PATH` (the value resolved from the environment at import time). |
+| F-13 | `PropellerClient.query()` accepts a raw JSON string, sends it to the engine using the same per-command connection lifecycle as `send()`, and returns the full parsed response dict on a `"status":"ok"` response. On `"status":"error"`, it raises `PropellerResponseError`. On connection failure, it raises `PropellerConnectionError`. |
 
 ---
 
@@ -73,6 +74,9 @@ The developer runs their script but the propeller-engine daemon is not running. 
 | AC-11 | A `PropellerClient` is used as a context manager | The `with` block exits (normally or via exception) | The client exits cleanly with no unclosed resources |
 | AC-12 | `PropellerConnectionError` is raised | The caller inspects `.__cause__` | The original `OSError` is accessible |
 | AC-13 | `PropellerClient()` is called | The constructor signature is inspected | It accepts no arguments (beyond `self`) |
+| AC-14 | The engine returns `{"status":"ok","project_present":true}` | `query()` reads the response | The full dict `{"status":"ok","project_present":true}` is returned to the caller |
+| AC-15 | The engine returns `{"status":"error","code":"some_error"}` | `query()` reads the response | `PropellerResponseError` is raised with `.code == "some_error"` |
+| AC-16 | The engine socket is unavailable | `query()` is called | `PropellerConnectionError` is raised |
 
 ---
 
@@ -99,3 +103,6 @@ _All questions resolved. No open questions remain._
 ### Cycle 4 — Confidence: 95%
 - Reconciled: Q-5 → F-2 (env-var resolved at module import time, stored as DEFAULT_SOCKET_PATH), F-12 (PropellerClient takes no constructor arguments), NF-6 (test isolation via monkeypatching DEFAULT_SOCKET_PATH or env-var before import), AC-9 (tightened: env var must be set before module import), AC-13 (new: constructor accepts no arguments)
 - All open questions resolved. No further questions needed.
+
+### Cycle 5 — Confidence: 95%
+- Reconciled: non-blocking mode in Epic 5 requires reading the `status` response body — F-13 (new `query()` method returning parsed response dict) and AC-14/AC-15/AC-16 added; `send()` contract unchanged (still returns `None`)

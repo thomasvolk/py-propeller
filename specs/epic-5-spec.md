@@ -9,7 +9,9 @@ The implementation lives in a new `propeller/player.py` module; `Project.play()`
 `.play()` serializes the project, sends `create-project` then `loop-start` to the engine over
 the Unix socket, then blocks with `time.sleep()` until Ctrl+C — which triggers `loop-stop` and
 a clean `sys.exit(0)`. When `-n` is in `sys.argv`, dry-run mode activates: JSON payloads are
-printed to stdout instead of sent, and `.play()` returns immediately without blocking.
+printed to stdout instead of sent, and `.play()` returns immediately without blocking. When
+`-s active` or `-s inactive` is in `sys.argv`, non-blocking state mode activates: the script
+sends commands and exits immediately without entering the blocking loop.
 
 **Confidence Level:** 92% — All decisions resolved; architecture, data model, and task table fully
 cover every F-x and AC-x. Residual 8%: NF-2 (shutdown < 2 s) has no explicit timing test —
@@ -72,7 +74,36 @@ Per Epic 2, each `PropellerClient().send(payload)` call owns its full connection
 **Dry-run mode:** At the top of `play(project)`, check `"-n" in sys.argv`. When true, build
 both command dicts as normal, call `print(json.dumps(cmd))` for each (create-project, then
 loop-start), and return immediately — no `PropellerClient` is instantiated, no socket is
-opened, no blocking loop is entered. This satisfies F-10, F-11, F-12, AC-9.
+opened, no blocking loop is entered. This satisfies F-10, F-11, F-12, AC-9. Dry-run takes
+precedence over `-s`; the `-s` value is not parsed when `-n` is present.
+
+**Non-blocking state mode:** After the dry-run check, inspect `sys.argv` for `-s`:
+
+```python
+state = None
+if '-s' in sys.argv:
+    idx = sys.argv.index('-s')
+    if idx + 1 < len(sys.argv):
+        state = sys.argv[idx + 1]
+```
+
+- **`state == 'inactive'`**: send `loop-stop` via `PropellerClient().send()`, then call
+  `sys.exit(0)` to exit the process. No project serialization. This satisfies F-16, F-18, AC-13, AC-16.
+- **`state == 'active'`**: call `PropellerClient().query('{"command":"status"}')` to get the
+  engine status dict. If `response['project_present']` is `false`, send `create-project` then
+  `loop-start`. If `true`, send `modify-project` (same payload shape as `create-project`) then
+  `loop-start`. Call `sys.exit(0)` after the two sends. This satisfies F-13, F-14, F-15, F-18,
+  AC-11, AC-12, AC-16.
+
+`PropellerClient().query()` is a new method defined in Epic 2 that returns the parsed response
+dict on success (rather than `None`). It is used only here, for the `status` command, where
+the response body carries `project_present`.
+
+The `modify-project` command JSON is built identically to `create-project`:
+`{"command": "modify-project", **serialize(project)}`.
+
+When `state` is `None` (no `-s` flag), the existing blocking flow (create-project, loop-start,
+blocking loop, Ctrl+C handler) runs unchanged.
 
 **Exit behaviour:** `sys.exit(0)` in the `KeyboardInterrupt` handler raises `SystemExit(0)`.
 Python exits cleanly without printing a traceback for `SystemExit`, satisfying NF-3 and NF-5.
@@ -98,12 +129,17 @@ that raises `KeyboardInterrupt` on the first call.
 
 1. Checks `"-n" in sys.argv`. If true (dry-run mode): build `create-project` and `loop-start`
    command dicts, print each as a JSON line to stdout, then return.
-2. Calls `serialize(project)` to get the payload dict.
-3. Sends `create-project` via `PropellerClient().send()`. If the call raises, the exception
-   propagates uncaught (no suppression for non-shutdown errors).
-4. Sends `loop-start` via `PropellerClient().send()`.
-5. Enters `while True: time.sleep(1)`.
-6. On `KeyboardInterrupt`: sends `loop-stop` (all exceptions suppressed via `except Exception:
+2. Parses `-s <value>` from `sys.argv`. If `state == 'inactive'`: send `loop-stop` via
+   `PropellerClient().send()`, then call `sys.exit(0)`.
+3. If `state == 'active'`: call `PropellerClient().query('{"command":"status"}')`. If
+   `project_present` is `false`, build and send `create-project`; otherwise build and send
+   `modify-project` (same payload shape). Then send `loop-start`. Call `sys.exit(0)`.
+4. (Blocking mode — no `-s` flag): calls `serialize(project)` to get the payload dict.
+5. Sends `create-project` via `PropellerClient().send()`. If the call raises, the exception
+   propagates uncaught.
+6. Sends `loop-start` via `PropellerClient().send()`.
+7. Enters `while True: time.sleep(1)`.
+8. On `KeyboardInterrupt`: sends `loop-stop` (all exceptions suppressed via `except Exception:
    pass`), then calls `sys.exit(0)`.
 
 Module-level imports: `json`, `sys`, `time`, `from propeller.serializer import serialize`,
@@ -161,6 +197,13 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | I-7 | Add `play()` method to `Project` in `composition.py`; lazily import and call `propeller.player.play(self)` | impl | UJ-1 | T-9 |
 | T-10 | Test: with `sys.argv` patched to include `"-n"`, call `play(stub_project)` and assert stdout contains two JSON lines (`create-project` and `loop-start`), `PropellerClient` is never instantiated, and the call returns (does not block or raise `SystemExit`) | test | F-10, F-11, F-12, AC-9 | I-7 |
 | I-8 | Add dry-run guard at the top of `play()`: `if "-n" in sys.argv:` — build both command dicts, `print(json.dumps(...))` each, return | impl | F-10, F-11, F-12 | T-10 |
+| T-11 | Test: with `sys.argv = ['script.py', '-s', 'inactive']`, call `play(stub_project)` and assert `PropellerClient().send()` is called once with `{"command":"loop-stop"}`, no serialization occurs, and `SystemExit(0)` is raised | test | F-16, F-18, AC-13, AC-16 | I-8 |
+| I-9 | After the dry-run guard, parse `-s <value>` from `sys.argv`; if `state == 'inactive'`: `PropellerClient().send(json.dumps({"command":"loop-stop"}))`, then `sys.exit(0)` | impl | F-16, F-18 | T-11 |
+| T-12 | Test: with `sys.argv = ['script.py', '-s', 'active']` and `PropellerClient().query()` returning `{"status":"ok","project_present":False}`, assert `send()` calls are `create-project` then `loop-start`, and `SystemExit(0)` is raised | test | F-13, F-14, F-18, AC-11, AC-16 | I-9 |
+| T-13 | Test: with `sys.argv = ['script.py', '-s', 'active']` and `PropellerClient().query()` returning `{"status":"ok","project_present":True}`, assert `send()` calls are `modify-project` then `loop-start`, `modify-project` payload has same structure as `create-project`, and `SystemExit(0)` is raised | test | F-13, F-15, F-18, AC-12, AC-16 | I-9 |
+| I-10 | Add `-s active` branch: call `PropellerClient().query('{"command":"status"}')`, select `create-project` or `modify-project` based on `project_present`, send the chosen command then `loop-start`, call `sys.exit(0)` | impl | F-13, F-14, F-15, F-18 | T-12, T-13 |
+| T-14 | Test: with `sys.argv = ['script.py', '-n', '-s', 'active']`, assert dry-run behaviour applies (stdout has create-project + loop-start, no socket opened) and `-s` is ignored | test | F-17, AC-14 | I-10 |
+| T-15 | Test: with `sys.argv = ['script.py', '-n', '-s', 'inactive']`, assert dry-run behaviour applies (stdout has create-project + loop-start) and `-s` is ignored | test | F-17, AC-15 | I-10 |
 
 ---
 
@@ -188,3 +231,9 @@ None — all decisions resolved.
 
 ### Cycle 3 — Confidence: 92%
 - Reconciled: dry-run feature from briefing update — dry-run overview paragraph, `play()` step 1, "Dry-run mode" architecture block, T-10/I-8 task rows added; no existing tasks or decisions changed
+
+### Cycle 4 — Confidence: 92%
+- Reconciled: non-blocking mode from briefing update — overview updated; "Non-blocking state mode" architecture block added (state parsing, `-s inactive` flow, `-s active` flow with `query()`); `play()` steps 2–3 added; T-11/I-9/T-12/T-13/I-10/T-14/T-15 task rows added; note added that `query()` is a new Epic 2 method returning the response dict; no existing tasks or decisions changed
+
+### Cycle 5 — Confidence: 92%
+- Reconciled: missed requirement from briefing — "exits immediately" means `sys.exit(0)` (process termination), not `return`. Both `-s inactive` and `-s active` branches now call `sys.exit(0)` instead of `return`; T-11/T-12/T-13 updated to expect `SystemExit(0)`; I-9/I-10 updated accordingly; F-18/AC-16 propagated from PRD

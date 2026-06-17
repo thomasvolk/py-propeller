@@ -396,3 +396,62 @@ class TestNoInternalImports:
         assert 'propeller.notes' not in source
         assert 'from propeller.notes' not in source
         assert 'import notes' not in source
+
+
+# ---------------------------------------------------------------------------
+# T-13: query() returns full response dict on status "ok"
+# ---------------------------------------------------------------------------
+
+class TestQueryOkResponse:
+    def test_query_returns_full_dict(self, monkeypatch):
+        import propeller.transport as transport
+        mock_sock, _ = _make_socket_mock(
+            [b'{"status": "ok", "project_present": true}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            result = transport.PropellerClient().query('{"command": "status"}')
+
+        assert result == {'status': 'ok', 'project_present': True}
+
+    def test_query_returns_dict_not_none(self, monkeypatch):
+        import propeller.transport as transport
+        mock_sock, _ = _make_socket_mock([b'{"status": "ok"}', b''])
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            result = transport.PropellerClient().query('{"command": "status"}')
+
+        assert result is not None
+        assert isinstance(result, dict)
+
+
+# ---------------------------------------------------------------------------
+# T-14: query() raises PropellerResponseError on status "error"
+# ---------------------------------------------------------------------------
+
+class TestQueryErrorResponse:
+    def test_query_raises_response_error(self, monkeypatch):
+        import propeller.transport as transport
+        from propeller.errors import PropellerResponseError
+        mock_sock, _ = _make_socket_mock(
+            [b'{"status": "error", "code": "no_project"}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            with pytest.raises(PropellerResponseError) as exc_info:
+                transport.PropellerClient().query('{"command": "status"}')
+
+        assert exc_info.value.code == 'no_project'
+
+    def test_query_raises_connection_error_on_failure(self, monkeypatch):
+        import propeller.transport as transport
+        from propeller.errors import PropellerConnectionError
+        mock_sock = mock.MagicMock()
+        mock_conn = mock.MagicMock()
+        mock_conn.connect.side_effect = OSError("Connection refused")
+        mock_sock.__enter__ = mock.Mock(return_value=mock_conn)
+        mock_sock.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            with pytest.raises(PropellerConnectionError):
+                transport.PropellerClient().query('{"command": "status"}')

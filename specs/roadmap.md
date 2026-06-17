@@ -95,6 +95,8 @@ Wire together the DSL, serialization, and transport into the `.play()` method.
 - The socket path is configurable via `PROPELLER_SOCK` without code changes
 - Clean shutdown on interrupt (e.g., Ctrl+C) is handled gracefully
 - Running with `-n` prints JSON payloads to stdout and exits immediately without connecting to the engine
+- Running with `-s active` creates or modifies a project and starts the loop, then exits (non-blocking)
+- Running with `-s inactive` stops the loop and exits immediately
 
 ---
 
