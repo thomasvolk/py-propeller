@@ -25,7 +25,7 @@ activity — with a clear message identifying the offending value and field.
 ### UJ-2 · Invalid track or project structure caught before playback
 
 A developer calls `track(channel=17, ...)` (MIDI channel out of range for
-0-indexed 0–15). On construction, a `PropellerValidationError` is raised with a
+1-indexed 1–16). On construction, a `PropellerValidationError` is raised with a
 message identifying the field and the offending value before any socket is opened.
 
 ### UJ-3 · Connection failure produces an actionable diagnostic
@@ -43,7 +43,7 @@ with the socket path and a suggestion to verify the engine is running.
 | F-1 | The `*` duration operator validates its argument at the point of application and raises `PropellerValidationError` if the resulting duration would be non-positive. Operator-time error messages do NOT include note position context. |
 | F-2 | Duration (`* beats`) must be a positive number (> 0); non-positive or non-numeric values raise `PropellerValidationError`. |
 | F-3 | When `C4(velocity)` is called with a velocity outside [0, 127], `PropellerValidationError` is raised immediately with a message naming the field (`velocity`) and the offending value. |
-| F-4 | `track()` validates at construction time: `name` is a non-empty string; `channel` is an integer in the range 0–15 (0-indexed MIDI channel); `instrument` is an integer 0–127. |
+| F-4 | `track()` validates at construction time: `name` is a non-empty string; `channel` is an integer in the range 1–16 (1-indexed MIDI channel); `instrument` is an integer 0–127. |
 | F-5 | `project()` validates at construction time: `bpm` is a positive number; `bars` is a positive integer; `time_signature` is a two-element tuple of positive integers. |
 | F-6 | Validation errors raised by `track()` and `project()` occur at construction time — before `.play()` opens any socket connection. |
 | F-7 | Socket connection failures (refused, timeout, unreachable) are caught inside `.play()` and re-raised as `PropellerConnectionError` with a message that includes the socket path and a suggestion to verify the engine is running. |
@@ -69,7 +69,7 @@ with the socket path and a suggestion to verify the engine is running.
 |-------|-------|------|------|
 | AC-1  | A note constructor is called with a velocity outside [0, 127] | `C4(200)` or `C4(-5)` is evaluated | `PropellerValidationError` is raised immediately with a message naming the field `velocity` and the offending value |
 | AC-2  | A note modifier (`*`) would produce a duration ≤ 0 | The modifier expression is evaluated | `PropellerValidationError` is raised with a message naming the note, the field (`duration`), and the requirement that it must be positive; no position context is included |
-| AC-3  | `track()` is called with `channel` outside 0–15 | `track()` is called | `PropellerValidationError` is raised naming the field `channel` and the offending value |
+| AC-3  | `track()` is called with `channel` outside 1–16 | `track()` is called | `PropellerValidationError` is raised naming the field `channel` and the offending value |
 | AC-4  | `track()` is called with `instrument` outside 0–127 | `track()` is called | `PropellerValidationError` is raised naming the field `instrument` and the offending value |
 | AC-5  | `track()` is called with an empty `name` string | `track()` is called | `PropellerValidationError` is raised naming the field `name` |
 | AC-6  | `project()` is called with `bpm` ≤ 0 | `project()` is called | `PropellerValidationError` is raised naming the field `bpm` |
@@ -90,7 +90,7 @@ with the socket path and a suggestion to verify the engine is running.
 - Added: Q1 (validation timing), Q2 (exception hierarchy), Q3 (MIDI channel convention), Q4 (note-position context in error messages)
 
 ### Cycle 2 — Confidence: 80%
-- Reconciled: Q1 → F-4, F-5, F-6 (construction-time validation); Q2 → F-10, NF-2, AC-11, AC-12 (PropellerError hierarchy); Q3 → F-4, AC-3 (0-indexed channel range 0–15); Q4 → F-9, AC-10 (bar index + note position in track()-level error messages)
+- Reconciled: Q1 → F-4, F-5, F-6 (construction-time validation); Q2 → F-10, NF-2, AC-11, AC-12 (PropellerError hierarchy); Q3 → F-4, AC-3 (1-indexed channel range 1–16); Q4 → F-9, AC-10 (bar index + note position in track()-level error messages)
 - Added: Q5 (which layer produces bar/position messages), Q6 (0-based vs 1-based index in messages), Q7 (PropellerResponseError scope)
 
 ### Cycle 3 — Confidence: 95%

@@ -10,7 +10,7 @@ from tests.stubs import StubNote, StubProject, StubRest, StubTrack
 def _make_stub_project():
     track = StubTrack(
         name='lead',
-        channel=0,
+        channel=1,
         instrument=1,
         notes=[StubNote(duration_beats=1.0, pitch=60, velocity=80)],
     )

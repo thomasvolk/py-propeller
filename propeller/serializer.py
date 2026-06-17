@@ -19,7 +19,7 @@ def _serialize_track(track) -> dict:
             tick_cursor += duration_ticks
     return {
         'name': track.name,
-        'channel': track.channel + 1,
+        'channel': track.channel,
         'instrument': track.instrument,
         'notes': notes_out,
     }

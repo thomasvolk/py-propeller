@@ -31,7 +31,7 @@ Three files are involved:
 ```
 track(name="Piano", channel=2, instrument=0, notes=[C4, D4])
     └─ Track.__post_init__
-           ├─ channel ∈ [0, 15]          → PropellerValidationError if violated (F-9)
+           ├─ channel ∈ [1, 16]          → PropellerValidationError if violated (F-9)
            ├─ instrument ∈ [0, 127]      → PropellerValidationError if violated (F-9)
            └─ for i, n in enumerate(notes):
                   isinstance(n, (Note, Rest)) → PropellerValidationError(pos=i+1) if not (F-12)
@@ -83,7 +83,7 @@ Python conventions (`Track`, `Project`).
 
 | Type | Fields | Notes |
 |------|--------|-------|
-| `Track` | `name: str`, `channel: int`, `instrument: int`, `notes: list[Note \| Rest]` | `@dataclass(frozen=True)`; validated in `__post_init__`; channel ∈ [0, 15], instrument ∈ [0, 127] |
+| `Track` | `name: str`, `channel: int`, `instrument: int`, `notes: list[Note \| Rest]` | `@dataclass(frozen=True)`; validated in `__post_init__`; channel ∈ [1, 16], instrument ∈ [0, 127] |
 | `Project` | `bpm: float`, `time_signature: tuple[int, int]`, `bars: int`, `tracks: list[Track]` | `@dataclass(frozen=True)`; validated in `__post_init__`; bpm > 0, bars must be positive int |
 | `PropellerError` | — | Defined in Epic 1 (`propeller/errors.py`); base library exception |
 | `PropellerValidationError` | — | Defined in Epic 1 (`propeller/errors.py`); raised for all construction validation failures |
@@ -98,11 +98,11 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 |------|------|------|---------|------------|
 | T-1  | Test `Track` construction: `Track(name="Piano", channel=2, instrument=0, notes=[C4, D4, E4, F4])` has `.name == "Piano"`, `.channel == 2`, `.instrument == 0`, `.notes` has length 4; `repr(t)` is a non-empty string | test | F-1, F-3, NF-2, AC-1, AC-3, AC-4 | — |
 | T-2  | Test `Track(notes=[])` constructs without error; `.notes` is an empty list; `Track(notes=[C4])` allows `.notes[0]` access | test | F-5, F-13, AC-11 | — |
-| T-3  | Test channel validation: `Track(channel=16, ...)` raises `PropellerValidationError`; `Track(channel=-1, ...)` raises; `Track(channel=0, ...)` and `Track(channel=15, ...)` succeed; raised error is instance of `PropellerError` with non-empty message | test | F-8, F-9, F-11, AC-6, AC-10 | — |
+| T-3  | Test channel validation: `Track(channel=17, ...)` raises `PropellerValidationError`; `Track(channel=-1, ...)` raises; `Track(channel=0, ...)` raises; `Track(channel=1, ...)` and `Track(channel=16, ...)` succeed; raised error is instance of `PropellerError` with non-empty message | test | F-8, F-9, F-11, AC-6, AC-10 | — |
 | T-4  | Test instrument validation: `Track(instrument=128, ...)` raises `PropellerValidationError`; `Track(instrument=-1, ...)` raises; `Track(instrument=0, ...)` and `Track(instrument=127, ...)` succeed | test | F-9, AC-7 | — |
 | T-5  | Test notes type validation: `Track(notes=[C4, "bad", D4])` raises `PropellerValidationError` whose message contains the 1-based position (2); non-Note/Rest at first position also caught | test | F-12 | — |
 | T-6  | Test `Track` immutability: `t.name = "Other"` raises `FrozenInstanceError` | test | F-7, NF-3, AC-13 | — |
-| I-1  | Implement `Track` in `propeller/composition.py` as `@dataclass(frozen=True)` with `__post_init__` enforcing channel ∈ [0, 15], instrument ∈ [0, 127], and type-only notes iteration | impl | F-1, F-3, F-5, F-7, F-8, F-9, F-12, F-13 | T-1, T-2, T-3, T-4, T-5, T-6 |
+| I-1  | Implement `Track` in `propeller/composition.py` as `@dataclass(frozen=True)` with `__post_init__` enforcing channel ∈ [1, 16], instrument ∈ [0, 127], and type-only notes iteration | impl | F-1, F-3, F-5, F-7, F-8, F-9, F-12, F-13 | T-1, T-2, T-3, T-4, T-5, T-6 |
 | T-7  | Test `Project` construction: `Project(bpm=120, time_signature=(4,4), bars=2, tracks=[t])` has correct attributes; `repr(p)` is non-empty; `p.tracks[0].name` accessible without error | test | F-2, F-4, NF-2, AC-2, AC-3, AC-4 | I-1 |
 | T-8  | Test `Project(tracks=[])` constructs without error; `.tracks` is an empty list | test | F-13, AC-12 | — |
 | T-9  | Test bpm validation: `Project(bpm=0, ...)` raises `PropellerValidationError`; `Project(bpm=-1, ...)` raises; `Project(bpm=120, ...)` succeeds | test | F-10, AC-8 | — |

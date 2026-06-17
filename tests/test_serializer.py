@@ -29,9 +29,9 @@ class TestStubs:
         assert sp.tracks == []
 
     def test_stub_track_fields(self):
-        st = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        st = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         assert st.name == "Piano"
-        assert st.channel == 0
+        assert st.channel == 1
         assert st.instrument == 0
         assert st.notes == []
 
@@ -52,7 +52,7 @@ class TestStubs:
 
 class TestSerializeReturnShape:
     def _minimal_project(self):
-        track = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        track = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         return StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[track])
 
     def test_returns_dict(self):
@@ -125,20 +125,20 @@ class TestHeaderLoopDuration:
 class TestTracksStructure:
     def test_single_track_count(self):
         from propeller.serializer import serialize
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         assert len(serialize(p)['tracks']) == 1
 
     def test_two_tracks_count(self):
         from propeller.serializer import serialize
-        t1 = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        t1 = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         t2 = StubTrack(name="Bass", channel=1, instrument=32, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t1, t2])
         assert len(serialize(p)['tracks']) == 2
 
     def test_track_has_required_keys(self):
         from propeller.serializer import serialize
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         track_out = serialize(p)['tracks'][0]
         assert 'name' in track_out
@@ -154,8 +154,8 @@ class TestTracksStructure:
 
     def test_track_channel_value(self):
         from propeller.serializer import serialize
-        t1 = StubTrack(name="A", channel=0, instrument=0, notes=[])
-        t2 = StubTrack(name="B", channel=1, instrument=0, notes=[])
+        t1 = StubTrack(name="A", channel=1, instrument=0, notes=[])
+        t2 = StubTrack(name="B", channel=2, instrument=0, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t1, t2])
         tracks_out = serialize(p)['tracks']
         assert tracks_out[0]['channel'] == 1
@@ -163,13 +163,13 @@ class TestTracksStructure:
 
     def test_track_instrument_value(self):
         from propeller.serializer import serialize
-        t = StubTrack(name="Bass", channel=0, instrument=32, notes=[])
+        t = StubTrack(name="Bass", channel=1, instrument=32, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         assert serialize(p)['tracks'][0]['instrument'] == 32
 
     def test_empty_track_notes(self):
         from propeller.serializer import serialize
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         assert serialize(p)['tracks'][0]['notes'] == []
 
@@ -182,7 +182,7 @@ class TestSingleNoteMapping:
     def test_note_c4_velocity80_2beats(self):
         from propeller.serializer import serialize
         note = StubNote(duration=2, pitch=60, velocity=80)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=2, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out == [[0, 960, 60, 80]]
@@ -190,7 +190,7 @@ class TestSingleNoteMapping:
     def test_note_start_tick_is_zero(self):
         from propeller.serializer import serialize
         note = StubNote(duration=1, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][0] == 0  # start_tick
@@ -198,7 +198,7 @@ class TestSingleNoteMapping:
     def test_note_duration_ticks_one_beat(self):
         from propeller.serializer import serialize
         note = StubNote(duration=1, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][1] == 480  # duration_ticks
@@ -213,7 +213,7 @@ class TestConsecutiveNoteTicks:
         from propeller.serializer import serialize
         n1 = StubNote(duration=1, pitch=60, velocity=100)
         n2 = StubNote(duration=1, pitch=62, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[n1, n2])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[n1, n2])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][0] == 0
@@ -223,7 +223,7 @@ class TestConsecutiveNoteTicks:
         from propeller.serializer import serialize
         n1 = StubNote(duration=2, pitch=60, velocity=100)
         n2 = StubNote(duration=1, pitch=62, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[n1, n2])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[n1, n2])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=2, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[1][0] == 960  # 2 beats × 480
@@ -238,7 +238,7 @@ class TestRestHandling:
         from propeller.serializer import serialize
         rest = StubRest(duration=1)
         note = StubNote(duration=1, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[rest, note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[rest, note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert len(notes_out) == 1
@@ -247,7 +247,7 @@ class TestRestHandling:
         from propeller.serializer import serialize
         rest = StubRest(duration=1)
         note = StubNote(duration=1, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[rest, note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[rest, note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][0] == 480  # start_tick after 1-beat rest
@@ -257,7 +257,7 @@ class TestRestHandling:
         r1 = StubRest(duration=1)
         r2 = StubRest(duration=2)
         note = StubNote(duration=1, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[r1, r2, note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[r1, r2, note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=4, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][0] == 1440  # (1+2) × 480
@@ -271,7 +271,7 @@ class TestFractionalTickRounding:
     def test_triplet_duration(self):
         from propeller.serializer import serialize
         note = StubNote(duration=1 / 3, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         notes_out = serialize(p)['tracks'][0]['notes']
         assert notes_out[0][1] == round(1 / 3 * 480)  # 160
@@ -279,7 +279,7 @@ class TestFractionalTickRounding:
     def test_fractional_does_not_raise(self):
         from propeller.serializer import serialize
         note = StubNote(duration=1 / 3, pitch=60, velocity=100)
-        t = StubTrack(name="Piano", channel=0, instrument=0, notes=[note])
+        t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         serialize(p)  # must not raise
 

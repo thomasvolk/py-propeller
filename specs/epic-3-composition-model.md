@@ -57,8 +57,8 @@ Python attribute access is sufficient.
 | F-5  | Individual notes within a track are accessible by index from the track object (e.g., `t.notes[0]`). |
 | F-6  | `track` and `project` are importable from the top-level `propeller` package: `from propeller import project, track`. |
 | F-7  | Domain objects are implemented as `@dataclass(frozen=True)` classes — immutable Python dataclasses with no hidden magic and no external dependencies. |
-| F-8  | The `channel` parameter uses 0-indexed numbering (0–15), matching the raw MIDI wire protocol. |
-| F-9  | `track()` raises `PropellerValidationError` immediately on construction if `channel` is outside 0–15 or `instrument` is outside 0–127. |
+| F-8  | The `channel` parameter uses 1-indexed numbering (1–16), matching the user-facing MIDI channel convention. |
+| F-9  | `track()` raises `PropellerValidationError` immediately on construction if `channel` is outside 1–16 or `instrument` is outside 0–127. |
 | F-10 | `project()` raises `PropellerValidationError` immediately on construction if `bpm` is not positive, or if `bars` is not a positive integer. An empty `tracks=[]` list is valid. |
 | F-11 | `PropellerValidationError` is a subclass of `PropellerError`, which is the base exception for the library. |
 | F-12 | When `track()` constructs, it iterates its `notes` list. If it encounters an element that is not a valid Note or Rest instance, it raises `PropellerValidationError` with a 1-based position index. *(Exact scope of "valid" — type-only check vs value-range check — is pending Q8.)* |
@@ -85,7 +85,7 @@ Python attribute access is sufficient.
 | AC-3  | A project `p` with at least one track is constructed | `p.tracks[0].name` is accessed | The track name is returned without error |
 | AC-4  | A project `p` is constructed | `repr(p)` is evaluated | The output is a non-empty human-readable string that reflects the project's key structure |
 | AC-5  | `from propeller import project, track` is executed in a clean environment | Both names are used to construct a valid project | No import error is raised and both callables work as specified |
-| AC-6  | `track()` is called with `channel=16` | Construction is attempted | `PropellerValidationError` is raised immediately |
+| AC-6  | `track()` is called with `channel=17` | Construction is attempted | `PropellerValidationError` is raised immediately |
 | AC-7  | `track()` is called with `instrument=128` | Construction is attempted | `PropellerValidationError` is raised immediately |
 | AC-8  | `project()` is called with `bpm=0` | Construction is attempted | `PropellerValidationError` is raised immediately |
 | AC-9  | `project()` is called with `bars=0` | Construction is attempted | `PropellerValidationError` is raised immediately |
@@ -120,7 +120,7 @@ What exactly does it validate about each element?
 - Added: Q1 (bars vs notes parameter name), Q2 (representation type), Q3 (channel numbering), Q4 (validation contract)
 
 ### Cycle 2 — Confidence: 82%
-- Reconciled: Q1 → F-1, F-4 (`bars=` parameter name); Q2 → F-8 (`@dataclass`); Q3 → F-9 (0-indexed channels 0–15); Q4 → F-10, F-11, F-12, F-13, AC-6, AC-7, AC-8, AC-9 (eager validation via `PropellerValidationError` subclassing `PropellerError`)
+- Reconciled: Q1 → F-1, F-4 (`bars=` parameter name); Q2 → F-8 (`@dataclass`); Q3 → F-9 (1-indexed channels 1–16); Q4 → F-10, F-11, F-12, F-13, AC-6, AC-7, AC-8, AC-9 (eager validation via `PropellerValidationError` subclassing `PropellerError`)
 - Added: Q5 (empty collection handling), Q6 (dataclass mutability)
 
 ### Cycle 3 — Confidence: 92%

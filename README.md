@@ -17,7 +17,7 @@ project(
     tracks=[
         track(
             name="Piano",
-            channel=0,
+            channel=1,
             instrument=0,
             notes=[
                 C4(120) * 2,    # middle C, velocity 120, held for 2 beats
@@ -109,7 +109,7 @@ p = project(
 p.play()
 ```
 
-- `channel` — MIDI channel, 0–15
+- `channel` — MIDI channel, 1–16
 - `instrument` — General MIDI program number, 0–127
 - `bpm` — beats per minute (positive float)
 - `bars` — number of bars to loop (positive integer)

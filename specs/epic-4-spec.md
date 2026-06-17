@@ -89,11 +89,11 @@ Provides `@dataclass` types that mirror the Epic 3 domain model contract (F-15).
 | `PPQN` | `int = 480` | Module-level constant in `propeller/serializer.py`. |
 | `Rest` | `duration: float` (at minimum) | Defined in `propeller.notes` (Epic 1). Serializer imports via `from propeller.notes import Rest` and uses `isinstance`. |
 | `StubProject` | `bpm: int`, `time_signature: tuple[int,int]`, `bars: int`, `tracks: list` | Test stub; mirrors Epic 3 domain model (F-15). |
-| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is a flat list of `StubNote` / `StubRest` objects. DSL channel is 0-indexed; serializer converts to 1-indexed for the engine. |
+| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is a flat list of `StubNote` / `StubRest` objects. DSL channel is 1-indexed (matching user-facing MIDI convention); serializer passes it through unchanged. |
 | `StubNote` | `duration: float`, `pitch: int`, `velocity: int` | Pitched note stub. `isinstance(item, Rest)` is `False`. |
 | `StubRest` | `duration: float` (inherits `Rest`) | Rest stub; `isinstance(item, Rest)` is `True`. |
 | Output dict (header) | `bpm: int`, `loop_duration: int` | `loop_duration = project.bars × time_signature[0] × 480` (F-5). |
-| Output dict (track) | `name: str`, `channel: int`, `instrument: int`, `notes: list[list[int]]` | Each note entry is `[start_tick, duration_ticks, pitch, velocity]` (F-7, F-8). `channel` is 1-indexed (DSL value + 1) to match engine expectation (1–16). |
+| Output dict (track) | `name: str`, `channel: int`, `instrument: int`, `notes: list[list[int]]` | Each note entry is `[start_tick, duration_ticks, pitch, velocity]` (F-7, F-8). `channel` is 1-indexed (1–16), passed through directly from the DSL value. |
 
 ---
 

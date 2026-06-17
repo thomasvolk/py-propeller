@@ -12,9 +12,9 @@ class Track:
     notes: list
 
     def __post_init__(self) -> None:
-        if not (0 <= self.channel <= 15):
+        if not (1 <= self.channel <= 16):
             raise PropellerValidationError(
-                f'channel {self.channel} is outside the valid range [0, 15]'
+                f'channel {self.channel} is outside the valid range [1, 16]'
             )
         if not (0 <= self.instrument <= 127):
             raise PropellerValidationError(

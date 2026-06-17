@@ -62,7 +62,7 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 | F-4 | `header.bpm` is taken directly from the project's BPM field. |
 | F-5 | `header.loop_duration` is computed as `project.bars × beats_per_bar × PPQN`, where `beats_per_bar` is the numerator of the project's `time_signature` and PPQN is 480. |
 | F-6 | The returned dict contains a `"tracks"` list, one entry per track in the project. |
-| F-7 | Each track entry is a dict with keys `"name"` (string), `"channel"` (integer, 0–15, 0-indexed), `"instrument"` (integer, 0–127), and `"notes"` (list of 4-element integer arrays). |
+| F-7 | Each track entry is a dict with keys `"name"` (string), `"channel"` (integer, 1–16, 1-indexed), `"instrument"` (integer, 0–127), and `"notes"` (list of 4-element integer arrays). |
 | F-8 | Each pitched note maps to a 4-element integer array `[start_tick, duration_ticks, pitch, velocity]`. |
 | F-9 | `start_tick` for each note is the cumulative tick offset from the start of the loop (sum of all preceding note and rest durations in ticks within the same track). |
 | F-10 | Note and rest durations from the DSL are converted to ticks using a fixed PPQN of 480 ticks per beat. |
@@ -93,7 +93,7 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 | AC-3  | A project with `bars=1` and `time_signature=(4, 4)` | `serialize(project)` is called | `result["header"]["loop_duration"]` equals `1920` (1 × 4 × 480) |
 | AC-4  | A track with two consecutive quarter-note pitches (1 beat each) | `serialize(project)` is called | The first note's `start_tick` is `0`; the second note's `start_tick` is `480` |
 | AC-5  | A track containing a one-beat rest followed by a quarter note | `serialize(project)` is called | The `notes` array contains exactly one entry, with `start_tick` equal to `480` |
-| AC-6  | A project with two tracks on different channels | `serialize(project)` is called | `result["tracks"]` contains two entries with the correct `channel` values (0-indexed) |
+| AC-6  | A project with two tracks on different channels | `serialize(project)` is called | `result["tracks"]` contains two entries with the correct `channel` values (1-indexed) |
 | AC-7  | A note with pitch 60 (C4) and velocity 80 lasting 2 beats | `serialize(project)` is called | The note maps to `[0, 960, 60, 80]` |
 | AC-8  | The serializer module | imported in isolation (no socket, no engine) | It imports without error and is callable |
 | AC-9  | A project with `bars=3` and `time_signature=(4, 4)` | `serialize(project)` is called | `result["header"]["loop_duration"]` equals `5760` (3 × 4 × 480) |
@@ -114,7 +114,7 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 - Added: Q1 (PPQN resolution), Q2 (loop_duration derivation), Q3 (serializer API shape), Q4 (command key ownership), Q5 (stub domain model contract)
 
 ### Cycle 2 — Confidence: 72%
-- Reconciled: Q1 → F-10 (fixed 480 PPQN), Q2 → F-5 (time-signature arithmetic for loop_duration), Q3 → F-1 (module-level function), Q4 → F-2 (no command key in serializer output), Q5 → F-14 (dataclass stub model); cross-cutting decisions → F-7 (channels 0-indexed), F-8 (note tuple [start_tick, duration_ticks, pitch, velocity])
+- Reconciled: Q1 → F-10 (fixed 480 PPQN), Q2 → F-5 (time-signature arithmetic for loop_duration), Q3 → F-1 (module-level function), Q4 → F-2 (no command key in serializer output), Q5 → F-14 (dataclass stub model); cross-cutting decisions → F-7 (channels 1-indexed, matching user-facing MIDI convention), F-8 (note tuple [start_tick, duration_ticks, pitch, velocity])
 - Added: Q6 (how bars count is obtained for loop_duration), Q7 (rounding policy for fractional beat-to-tick conversion)
 
 ### Cycle 3 — Confidence: 92%

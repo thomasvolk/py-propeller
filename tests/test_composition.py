@@ -17,17 +17,17 @@ class TestTrackConstruction:
 
     def test_repr_is_non_empty(self):
         from propeller.composition import Track
-        t = Track(name="Piano", channel=0, instrument=0, notes=[C4])
+        t = Track(name="Piano", channel=1, instrument=0, notes=[C4])
         assert repr(t)
 
     def test_empty_notes(self):
         from propeller.composition import Track
-        t = Track(name="Drums", channel=9, instrument=0, notes=[])
+        t = Track(name="Drums", channel=10, instrument=0, notes=[])
         assert t.notes == []
 
     def test_notes_index_access(self):
         from propeller.composition import Track
-        t = Track(name="Bass", channel=0, instrument=32, notes=[C4])
+        t = Track(name="Bass", channel=1, instrument=32, notes=[C4])
         assert t.notes[0] is C4
 
 
@@ -35,27 +35,32 @@ class TestTrackChannelValidation:
     def test_channel_too_high_raises(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError):
-            Track(name="x", channel=16, instrument=0, notes=[])
+            Track(name="x", channel=17, instrument=0, notes=[])
 
     def test_channel_negative_raises(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError):
             Track(name="x", channel=-1, instrument=0, notes=[])
 
-    def test_channel_zero_is_valid(self):
+    def test_channel_zero_raises(self):
         from propeller.composition import Track
-        t = Track(name="x", channel=0, instrument=0, notes=[])
-        assert t.channel == 0
+        with pytest.raises(PropellerValidationError):
+            Track(name="x", channel=0, instrument=0, notes=[])
 
-    def test_channel_fifteen_is_valid(self):
+    def test_channel_one_is_valid(self):
         from propeller.composition import Track
-        t = Track(name="x", channel=15, instrument=0, notes=[])
-        assert t.channel == 15
+        t = Track(name="x", channel=1, instrument=0, notes=[])
+        assert t.channel == 1
+
+    def test_channel_sixteen_is_valid(self):
+        from propeller.composition import Track
+        t = Track(name="x", channel=16, instrument=0, notes=[])
+        assert t.channel == 16
 
     def test_channel_error_is_propeller_error_subclass(self):
         from propeller.composition import Track
         with pytest.raises(PropellerError) as exc_info:
-            Track(name="x", channel=16, instrument=0, notes=[])
+            Track(name="x", channel=17, instrument=0, notes=[])
         assert isinstance(exc_info.value, PropellerValidationError)
         assert str(exc_info.value)
 
@@ -64,21 +69,21 @@ class TestTrackInstrumentValidation:
     def test_instrument_too_high_raises(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError):
-            Track(name="x", channel=0, instrument=128, notes=[])
+            Track(name="x", channel=1, instrument=128, notes=[])
 
     def test_instrument_negative_raises(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError):
-            Track(name="x", channel=0, instrument=-1, notes=[])
+            Track(name="x", channel=1, instrument=-1, notes=[])
 
     def test_instrument_zero_is_valid(self):
         from propeller.composition import Track
-        t = Track(name="x", channel=0, instrument=0, notes=[])
+        t = Track(name="x", channel=1, instrument=0, notes=[])
         assert t.instrument == 0
 
     def test_instrument_127_is_valid(self):
         from propeller.composition import Track
-        t = Track(name="x", channel=0, instrument=127, notes=[])
+        t = Track(name="x", channel=1, instrument=127, notes=[])
         assert t.instrument == 127
 
 
@@ -86,13 +91,13 @@ class TestTrackNotesTypeValidation:
     def test_invalid_element_raises_with_position(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError) as exc_info:
-            Track(name="x", channel=0, instrument=0, notes=[C4, "bad", D4])
+            Track(name="x", channel=1, instrument=0, notes=[C4, "bad", D4])
         assert "2" in str(exc_info.value)
 
     def test_invalid_element_at_first_position(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError) as exc_info:
-            Track(name="x", channel=0, instrument=0, notes=[42])
+            Track(name="x", channel=1, instrument=0, notes=[42])
         assert "1" in str(exc_info.value)
 
 
@@ -100,12 +105,12 @@ class TestTrackNameValidation:
     def test_empty_name_raises_validation_error(self):
         from propeller.composition import Track
         with pytest.raises(PropellerValidationError) as exc_info:
-            Track(name="", channel=0, instrument=0, notes=[])
+            Track(name="", channel=1, instrument=0, notes=[])
         assert 'name' in str(exc_info.value)
 
     def test_non_empty_name_succeeds(self):
         from propeller.composition import Track
-        t = Track(name="Piano", channel=0, instrument=0, notes=[])
+        t = Track(name="Piano", channel=1, instrument=0, notes=[])
         assert t.name == "Piano"
 
 
@@ -114,33 +119,33 @@ class TestTrackNoteVelocityValidation:
         from propeller.composition import Track
         from propeller.notes import Note
         with pytest.raises(PropellerValidationError) as exc_info:
-            Track(name="X", channel=0, instrument=0, notes=[Note(60, 1.0, 200)])
+            Track(name="X", channel=1, instrument=0, notes=[Note(60, 1.0, 200)])
         assert 'position 1' in str(exc_info.value)
 
     def test_note_with_velocity_200_at_position_2_raises(self):
         from propeller.composition import Track
         from propeller.notes import C4, Note
         with pytest.raises(PropellerValidationError) as exc_info:
-            Track(name="X", channel=0, instrument=0, notes=[C4, Note(60, 1.0, 200)])
+            Track(name="X", channel=1, instrument=0, notes=[C4, Note(60, 1.0, 200)])
         assert 'position 2' in str(exc_info.value)
 
     def test_rest_at_any_position_does_not_trigger_velocity_check(self):
         from propeller.composition import Track
         from propeller.notes import Rest
-        t = Track(name="X", channel=0, instrument=0, notes=[Rest(), Rest()])
+        t = Track(name="X", channel=1, instrument=0, notes=[Rest(), Rest()])
         assert len(t.notes) == 2
 
     def test_valid_notes_succeed(self):
         from propeller.composition import Track
         from propeller.notes import C4, D4
-        t = Track(name="X", channel=0, instrument=0, notes=[C4, D4])
+        t = Track(name="X", channel=1, instrument=0, notes=[C4, D4])
         assert len(t.notes) == 2
 
 
 class TestTrackImmutability:
     def test_name_mutation_raises(self):
         from propeller.composition import Track
-        t = Track(name="Piano", channel=0, instrument=0, notes=[])
+        t = Track(name="Piano", channel=1, instrument=0, notes=[])
         with pytest.raises(dataclasses.FrozenInstanceError):
             t.name = "Other"
 
@@ -148,7 +153,7 @@ class TestTrackImmutability:
 class TestProjectConstruction:
     def test_attributes(self):
         from propeller.composition import Track, Project
-        t = Track(name="Piano", channel=0, instrument=0, notes=[C4])
+        t = Track(name="Piano", channel=1, instrument=0, notes=[C4])
         p = Project(bpm=120, time_signature=(4, 4), bars=2, tracks=[t])
         assert p.bpm == 120
         assert p.time_signature == (4, 4)
@@ -157,7 +162,7 @@ class TestProjectConstruction:
 
     def test_track_name_accessible(self):
         from propeller.composition import Track, Project
-        t = Track(name="Piano", channel=0, instrument=0, notes=[C4])
+        t = Track(name="Piano", channel=1, instrument=0, notes=[C4])
         p = Project(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
         assert p.tracks[0].name == "Piano"
 

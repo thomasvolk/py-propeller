@@ -15,7 +15,7 @@ Six of the thirteen ACs map to behaviour already delivered by earlier epics:
 | AC | Already delivered by | Evidence |
 |----|---------------------|---------|
 | AC-1 | Epic 1 | `Note.__call__` validates velocity; test T-5 in `epic-1-spec.md` |
-| AC-3 | Epic 3 | `Track.__post_init__` enforces channel ∈ [0, 15]; test T-3 in `epic-3-spec.md` |
+| AC-3 | Epic 3 | `Track.__post_init__` enforces channel ∈ [1, 16]; test T-3 in `epic-3-spec.md` |
 | AC-4 | Epic 3 | `Track.__post_init__` enforces instrument ∈ [0, 127]; test T-4 in `epic-3-spec.md` |
 | AC-9 (partial) | Epic 2 | `PropellerClient.send()` wraps `OSError` as `PropellerConnectionError` with socket path and `__cause__`; test T-10 in `epic-2-spec.md` |
 | AC-12 | Epic 1 | `PropellerValidationError` subclasses `PropellerError` in `propeller/errors.py` |
@@ -110,7 +110,7 @@ No new types are introduced. All exception classes already exist from Epics 1 an
 | `PropellerConnectionError` | — | `propeller/errors.py` (Epic 2). Subclass of `PropellerError`. Raised for socket failures. Message gains actionable suggestion in Epic 6. |
 | `Note` | `pitch: int`, `duration: float = 1.0`, `velocity: int = 100` | `@dataclass(frozen=True)` from Epic 1. `__mul__` gains duration guard in Epic 6. |
 | `Rest` | `duration: float = 1.0` | `@dataclass(frozen=True)` from Epic 1. `__mul__` gains duration guard in Epic 6. No velocity field; skipped in Track note-value validation. |
-| `Track` | `name: str`, `channel: int`, `instrument: int`, `notes: list[Note \| Rest]` | `@dataclass(frozen=True)` from Epic 3. `__post_init__` gains name validation and velocity-only note-value validation in Epic 6. |
+| `Track` | `name: str`, `channel: int`, `instrument: int`, `notes: list[Note \| Rest]` | `@dataclass(frozen=True)` from Epic 3. channel ∈ [1, 16]. `__post_init__` gains name validation and velocity-only note-value validation in Epic 6. |
 | `Project` | `bpm: float`, `time_signature: tuple[int, int]`, `bars: int`, `tracks: list[Track]` | `@dataclass(frozen=True)` from Epic 3. `__post_init__` gains `time_signature` validation in Epic 6. |
 
 ---
@@ -126,7 +126,7 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | I-1 | Add duration guard to `Note.__mul__` and `Rest.__mul__`: if `beats` is not a positive number raise `PropellerValidationError` naming `duration` | impl | F-1, F-2 | T-1, T-2 |
 | T-3 | Test: `track(name="")` raises `PropellerValidationError` whose message names field `name`; `track(name="Piano")` succeeds | test | F-4, AC-5 | — |
 | I-2 | Add `name` non-empty validation to `Track.__post_init__`: if `not self.name` raise `PropellerValidationError` naming `name` | impl | F-4 | T-3 |
-| T-4 | Test: `Track(name="X", channel=0, instrument=0, notes=[Note(60, 1.0, 200)])` raises `PropellerValidationError` whose message contains "position 1"; constructing with `[C4, Note(60, 1.0, 200)]` raises with "position 2"; `Rest` at any position does not trigger the velocity check | test | F-9, AC-11 | I-2 |
+| T-4 | Test: `Track(name="X", channel=1, instrument=0, notes=[Note(60, 1.0, 200)])` raises `PropellerValidationError` whose message contains "position 1"; constructing with `[C4, Note(60, 1.0, 200)]` raises with "position 2"; `Rest` at any position does not trigger the velocity check | test | F-9, AC-11 | I-2 |
 | I-3 | Add note-value validation to `Track.__post_init__`: iterate `notes` with 1-based index; for each `Note` instance check `velocity ∈ [0, 127]` only; skip `Rest` instances; raise `PropellerValidationError` with `f"position {i}"` on first failure | impl | F-9 | T-4 |
 | T-5 | Test: `project(bpm=120, bars=2, time_signature=(4, 0), tracks=[])` raises `PropellerValidationError` naming `time_signature`; same for `(4,)`, `"4/4"`, `(0, 4)`, `(-1, 4)`, `(True, 4)`; `(4, 4)` and `(3, 8)` succeed | test | F-5, AC-8 | — |
 | I-4 | Add `time_signature` validation to `Project.__post_init__`: must be a tuple of exactly two elements, both positive integers (exclude `bool`); raise `PropellerValidationError` naming `time_signature` | impl | F-5 | T-5 |
