@@ -184,6 +184,20 @@ python my_project.py -s inactive   # stop the loop
 
 The `-s` flag has no effect when `-n` is also present — dry-run mode takes precedence.
 
+### Live setup
+
+Combine `-s active` with the Unix `watch` command to get an instant feedback loop while composing. `watch` re-runs your script at a fixed interval, so every save is picked up automatically:
+
+```
+watch -n 0.1 python examples/beat_example.py -s active
+```
+
+While `watch` is running, open `beat_example.py` in your editor and save changes — the engine will load the updated project within 100 ms. Stop playback at any time with:
+
+```
+python examples/beat_example.py -s inactive
+```
+
 ## Features
 
 - Expressive note DSL: `C4(120) * 2`, `Ef4 * 0.5`, `Z * 4`
