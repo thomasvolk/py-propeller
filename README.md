@@ -114,6 +114,39 @@ p.play()
 - `bpm` — beats per minute (positive float)
 - `bars` — number of bars to loop (positive integer)
 
+### Overlapping notes (chords and polyphony)
+
+Pass `notes` as a list of lists to define multiple independent lanes within a single track. Each lane accumulates its own tick cursor from zero, so notes in different lanes can start at the same tick:
+
+```python
+track(
+    name="Piano",
+    channel=1,
+    instrument=0,
+    notes=[
+        [C4() * 2],   # lane 1 — starts at tick 0
+        [E4() * 2],   # lane 2 — starts at tick 0
+        [G4() * 2],   # lane 3 — starts at tick 0
+    ],
+)
+```
+
+A more complex example — melody in one lane, sustained bass note in another:
+
+```python
+track(
+    name="Piano",
+    channel=1,
+    instrument=0,
+    notes=[
+        [C4(), D4(), E4(), F4()],   # melody lane
+        [C3() * 4],                  # bass lane, held for 4 beats
+    ],
+)
+```
+
+A flat `notes=[...]` list continues to work as a single lane. The two forms cannot be mixed within the same track.
+
 ### Transport configuration
 
 py-propeller connects to the engine via Unix domain socket at `/tmp/propeller.sock` by default. Override with an environment variable:
@@ -155,6 +188,7 @@ The `-s` flag has no effect when `-n` is also present — dry-run mode takes pre
 
 - Expressive note DSL: `C4(120) * 2`, `Ef4 * 0.5`, `Z * 4`
 - All MIDI pitches across octaves 0–8 with sharp and flat aliases
+- Multi-lane tracks for chords and polyphony: `notes=[[C4()], [E4()], [G4()]]`
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
