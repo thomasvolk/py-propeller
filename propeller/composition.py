@@ -22,16 +22,29 @@ class Track:
             )
         if not self.name:
             raise PropellerValidationError('name must be a non-empty string')
-        for i, note in enumerate(self.notes, start=1):
-            if not isinstance(note, (Note, Rest)):
-                raise PropellerValidationError(
-                    f'notes[{i}] is not a Note or Rest instance'
-                )
-            if isinstance(note, Note) and not (0 <= note.velocity <= 127):
-                raise PropellerValidationError(
-                    f'Invalid velocity at position {i}: value {note.velocity} '
-                    f'exceeds valid range [0, 127]'
-                )
+        if self.notes and isinstance(self.notes[0], list):
+            for lane_i, lane in enumerate(self.notes, start=1):
+                for pos_i, note in enumerate(lane, start=1):
+                    if not isinstance(note, (Note, Rest)):
+                        raise PropellerValidationError(
+                            f'lane {lane_i}, position {pos_i}: not a Note or Rest instance'
+                        )
+                    if isinstance(note, Note) and not (0 <= note.velocity <= 127):
+                        raise PropellerValidationError(
+                            f'Invalid velocity at lane {lane_i}, position {pos_i}: '
+                            f'value {note.velocity} exceeds valid range [0, 127]'
+                        )
+        else:
+            for i, note in enumerate(self.notes, start=1):
+                if not isinstance(note, (Note, Rest)):
+                    raise PropellerValidationError(
+                        f'notes[{i}] is not a Note or Rest instance'
+                    )
+                if isinstance(note, Note) and not (0 <= note.velocity <= 127):
+                    raise PropellerValidationError(
+                        f'Invalid velocity at position {i}: value {note.velocity} '
+                        f'exceeds valid range [0, 127]'
+                    )
 
 
 @dataclasses.dataclass(frozen=True)

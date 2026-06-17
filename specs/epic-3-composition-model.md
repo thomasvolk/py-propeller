@@ -44,13 +44,21 @@ After construction, a developer accesses attributes directly — `p.bpm`, `p.bar
 logic (e.g., a test assertion or a custom serializer). No special API is required: standard
 Python attribute access is sufficient.
 
+### UJ-4 · Composer writes overlapping notes using multiple lanes
+
+A developer wants a chord or overlapping voices in a single track. They pass a list of lists
+as the `notes` argument, where each inner list is an independent lane. Each lane accumulates
+its own tick offsets independently, starting from zero. The serializer later merges all lanes
+into a single flat notes list, enabling overlapping start-ticks. For example, a C-major chord:
+`notes=[[C4()], [E4()], [G4()]]` — three single-note lanes, all starting at tick 0.
+
 ---
 
 ## Functional Requirements
 
 | ID   | Requirement |
 |------|-------------|
-| F-1  | `track()` accepts keyword arguments `name` (str), `channel` (int), `instrument` (int), and `notes` (flat list of Note or Rest instances as produced by the Epic 1 DSL). |
+| F-1  | `track()` accepts keyword arguments `name` (str), `channel` (int), `instrument` (int), and `notes` — either a flat list of Note or Rest instances (single-lane form) or a list of lists of Note or Rest instances (multi-lane form). |
 | F-2  | `project()` accepts keyword arguments `bpm` (numeric), `time_signature` (2-tuple of ints, e.g. `(4, 4)`), `bars` (positive integer — the loop length in bars), and `tracks` (list of track objects). |
 | F-3  | The return value of `track()` exposes all its arguments as readable Python attributes: `.name`, `.channel`, `.instrument`, `.notes`. |
 | F-4  | The return value of `project()` exposes all its arguments as readable Python attributes: `.bpm`, `.time_signature`, `.bars`, `.tracks`. |
@@ -61,8 +69,10 @@ Python attribute access is sufficient.
 | F-9  | `track()` raises `PropellerValidationError` immediately on construction if `channel` is outside 1–16 or `instrument` is outside 0–127. |
 | F-10 | `project()` raises `PropellerValidationError` immediately on construction if `bpm` is not positive, or if `bars` is not a positive integer. An empty `tracks=[]` list is valid. |
 | F-11 | `PropellerValidationError` is a subclass of `PropellerError`, which is the base exception for the library. |
-| F-12 | When `track()` constructs, it iterates its `notes` list. If it encounters an element that is not a valid Note or Rest instance, it raises `PropellerValidationError` with a 1-based position index. *(Exact scope of "valid" — type-only check vs value-range check — is pending Q8.)* |
+| F-12 | When `track()` constructs, it validates its `notes` list. For the flat (single-lane) form, if an element is not a Note or Rest it raises `PropellerValidationError` with a 1-based position index. For the multi-lane form, the same type check applies to each element of each inner list; the error message includes both the 1-based lane index and the 1-based position within that lane. |
 | F-13 | `track(notes=[])` and `project(tracks=[])` are both valid — empty compositions are not errors. |
+| F-14 | If `notes` is a flat list (each element is a Note or Rest), the track operates as a single lane. If `notes` is a list of lists (each inner list is a sequence of Note or Rest elements), the track defines multiple independent lanes. The two forms are mutually exclusive and detected automatically: if the first element of `notes` is a list, the multi-lane form is used. An empty `notes=[]` is treated as single-lane. |
+| F-15 | In multi-lane form, tick offsets are calculated per lane by the serializer: each lane's tick cursor starts at 0 and advances independently by the cumulative durations within that lane. Empty inner lanes are valid. |
 
 ---
 
@@ -94,6 +104,9 @@ Python attribute access is sufficient.
 | AC-12 | `project()` is called with `tracks=[]` | Construction completes | No error is raised; `.tracks` is an empty list |
 | AC-13 | A `Track` object `t` is constructed | `t.name = "Other"` is attempted | `FrozenInstanceError` is raised, confirming immutability |
 | AC-14 | A `Project` object `p` is constructed | `p.bpm = 200` is attempted | `FrozenInstanceError` is raised, confirming immutability |
+| AC-15 | `track(name="Piano", channel=1, instrument=0, notes=[[C4()], [E4()], [G4()]])` is called | The returned object is inspected | `.notes` has length 3 (number of lanes) and each inner list has length 1 |
+| AC-16 | `track(name="Piano", channel=1, instrument=0, notes=[[C4()], []])` is called | Construction completes | No error is raised; empty inner lanes are valid |
+| AC-17 | `track()` is called with `notes=[[C4(), "bad"]]` (invalid element in lane 1, position 2) | Construction is attempted | `PropellerValidationError` is raised and the message includes lane and position context |
 
 ---
 
@@ -150,3 +163,13 @@ What exactly does it validate about each element?
 - Reconciled: nothing (no answered questions)
 - Gap identified: F-12 stated validation error messages include note position "where applicable" without specifying what track() validates about its notes list. F-12 tightened to name the type-check behaviour explicitly (pending Q8 resolution).
 - Added: Q8 (scope of track()-level notes validation: type-only vs type+value vs none)
+
+### Cycle 7 — Confidence: 90%
+- Context: briefing.md updated to add multi-lane overlapping notes support.
+- UJ-4 added: overlapping notes via multiple lanes.
+- F-1 updated: `notes` accepts flat list (single-lane) or list of lists (multi-lane).
+- F-12 updated: validation traverses both flat and lane structures; lane error messages include 1-based lane index and position.
+- F-14 added: detection rule (first element is list → multi-lane; empty → single-lane).
+- F-15 added: tick offsets computed per lane independently by the serializer; empty inner lanes valid.
+- AC-15, AC-16, AC-17 added for multi-lane construction and validation.
+- No new open questions; Q8 from Cycle 6 still pending (answered as A in spec).

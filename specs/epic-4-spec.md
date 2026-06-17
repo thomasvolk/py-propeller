@@ -29,6 +29,7 @@ ensuring `isinstance(item, Rest)` returns `True` inside the serializer.
 
 **Serialization flow inside `serialize(project)`:**
 
+Single-lane form (flat `track.notes`):
 ```python
 from propeller.notes import Rest
 
@@ -37,12 +38,24 @@ for track in project.tracks:
     notes_out   = []
     for item in track.notes:
         duration_ticks = _beats_to_ticks(item.duration)
-        if isinstance(item, Rest):   # rest — advance cursor only
+        if isinstance(item, Rest):
             tick_cursor += duration_ticks
-        else:                        # pitched note
+        else:
             notes_out.append([tick_cursor, duration_ticks, item.pitch, item.velocity])
             tick_cursor += duration_ticks
 ```
+
+Multi-lane form (detected by `track.notes and isinstance(track.notes[0], list)`):
+```python
+all_notes = []
+for lane in track.notes:           # each lane is independent
+    for item in _serialize_lane(lane):
+        all_notes.append(item)
+notes_out = sorted(all_notes, key=lambda n: n[0])   # stable sort by start_tick (F-17)
+```
+
+`_serialize_lane(lane)` applies the same tick-cursor logic as the single-lane path and returns
+a list of `[start_tick, duration_ticks, pitch, velocity]` entries.
 
 ---
 
@@ -58,10 +71,14 @@ top-level keys `"header"` and `"tracks"`; never includes `"command"` (F-2). Dele
 
 **`_beats_to_ticks(beats: float) -> int`** — applies `round(beats * PPQN)` (F-10, F-12).
 
-**`_serialize_track(track) -> dict`** — iterates `track.notes`, accumulates `tick_cursor`;
-uses `isinstance(item, Rest)` to detect rests (advance cursor only) vs pitched notes (append
-4-element list); returns `{"name": …, "channel": …, "instrument": …, "notes": […]}` (F-7,
-F-8, F-9, F-11).
+**`_serialize_lane(lane) -> list`** — iterates a single lane (a flat list of Note/Rest items),
+accumulates `tick_cursor` from 0, and returns a list of `[start_tick, duration_ticks, pitch,
+velocity]` entries. Rest items advance the cursor but produce no output entry (F-11).
+
+**`_serialize_track(track) -> dict`** — detects single-lane vs multi-lane form. Single-lane:
+delegates to `_serialize_lane` directly. Multi-lane: calls `_serialize_lane` for each inner
+list, concatenates all results, and sorts by `start_tick` (stable, F-17). Returns
+`{"name": …, "channel": …, "instrument": …, "notes": […]}` (F-7, F-8, F-9, F-11, F-16, F-17).
 
 Imports: `from propeller.notes import Rest` — no import from `propeller.transport` (F-14).
 The `Rest` import from the note primitives module is permitted; F-14 only excludes the
@@ -89,7 +106,7 @@ Provides `@dataclass` types that mirror the Epic 3 domain model contract (F-15).
 | `PPQN` | `int = 480` | Module-level constant in `propeller/serializer.py`. |
 | `Rest` | `duration: float` (at minimum) | Defined in `propeller.notes` (Epic 1). Serializer imports via `from propeller.notes import Rest` and uses `isinstance`. |
 | `StubProject` | `bpm: int`, `time_signature: tuple[int,int]`, `bars: int`, `tracks: list` | Test stub; mirrors Epic 3 domain model (F-15). |
-| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is a flat list of `StubNote` / `StubRest` objects. DSL channel is 1-indexed (matching user-facing MIDI convention); serializer passes it through unchanged. |
+| `StubTrack` | `name: str`, `channel: int`, `instrument: int`, `notes: list` | Test stub; `notes` is either a flat list of `StubNote`/`StubRest` objects (single-lane) or a list of such lists (multi-lane), mirroring the Epic 3 dual-form contract. DSL channel is 1-indexed; serializer passes it through unchanged. |
 | `StubNote` | `duration: float`, `pitch: int`, `velocity: int` | Pitched note stub. `isinstance(item, Rest)` is `False`. |
 | `StubRest` | `duration: float` (inherits `Rest`) | Rest stub; `isinstance(item, Rest)` is `True`. |
 | Output dict (header) | `bpm: int`, `loop_duration: int` | `loop_duration = project.bars × time_signature[0] × 480` (F-5). |
@@ -121,6 +138,9 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | T-9  | Test: `StubNote(duration=1/3)` yields `duration_ticks == round(1/3 * 480) == 160`; no exception raised (AC-10, F-12) | test | AC-10, F-12 | I-7 |
 | I-8  | Implement `_beats_to_ticks(beats: float) -> int` using `round(beats * PPQN)`; use it in all tick computations | impl | F-10, F-12 | T-9 |
 | T-10 | Test: `import propeller.serializer` succeeds in a subprocess with no socket, no engine running; module is callable (AC-8, F-13, F-14, NF-2, NF-3) | test | AC-8, F-13, F-14, NF-2, NF-3 | I-2 |
+| T-11 | Test: three single-note lanes `[[C4(80)], [E4(80)], [G4(80)]]` serialize to exactly 3 entries all with `start_tick=0` and correct pitches/velocities (AC-11, F-16, F-17) | test | AC-11, F-16, F-17 | I-7 |
+| T-12 | Test: two-lane track `[[C4(), D4()], [E4()]]` serializes to 3 entries: C4 at tick 0, E4 at tick 0, D4 at tick 480 (sorted by start_tick, stable within tie) (AC-12, F-9, F-16, F-17) | test | AC-12, F-9, F-16, F-17 | I-7 |
+| I-9  | Extract `_serialize_lane(lane)` from the single-lane path in `_serialize_track`; add multi-lane detection (`isinstance(track.notes[0], list)` when non-empty); call `_serialize_lane` per inner list, concatenate, and sort by `start_tick` | impl | F-16, F-17 | T-11, T-12 |
 
 ---
 
@@ -153,3 +173,10 @@ None.
 ### Cycle 4 — Confidence: 92%
 - Reconciled: Q-2 → A (`propeller.notes`); Architecture Overview, Components, and Data Model updated with concrete `from propeller.notes import Rest`; StubRest now explicitly inherits from `propeller.notes.Rest`
 - Added: nothing (no open questions or decisions remain)
+
+### Cycle 5 — Confidence: 92%
+- Context: briefing.md updated with multi-lane overlapping notes requirement.
+- Architecture Overview: multi-lane serialization flow added alongside single-lane flow.
+- Components: `_serialize_lane` extracted as a named helper; `_serialize_track` updated to detect lane form and sort merged results by start_tick.
+- Data Model: `StubTrack.notes` updated to support both flat and list-of-lists forms.
+- Tasks: T-11, T-12 (multi-lane tests) and I-9 (lane detection + merge impl) added.

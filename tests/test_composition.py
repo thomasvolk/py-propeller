@@ -272,6 +272,83 @@ class TestProjectImmutability:
             p.bpm = 200
 
 
+class TestTrackMultiLaneConstruction:
+    def test_three_lane_chord_length_and_inner_lengths(self):
+        from propeller.composition import Track
+        from propeller.notes import C4, E4, G4
+        t = Track(name="Piano", channel=1, instrument=0,
+                  notes=[[C4()], [E4()], [G4()]])
+        assert len(t.notes) == 3
+        assert len(t.notes[0]) == 1
+        assert len(t.notes[1]) == 1
+        assert len(t.notes[2]) == 1
+
+    def test_empty_inner_lane_is_valid(self):
+        from propeller.composition import Track
+        from propeller.notes import C4
+        t = Track(name="Piano", channel=1, instrument=0,
+                  notes=[[C4()], []])
+        assert len(t.notes) == 2
+        assert t.notes[1] == []
+
+    def test_multi_lane_with_multiple_notes_per_lane(self):
+        from propeller.composition import Track
+        from propeller.notes import C4, D4, E4, F4
+        t = Track(name="Piano", channel=1, instrument=0,
+                  notes=[[C4(), D4()], [E4(), F4()]])
+        assert len(t.notes) == 2
+        assert len(t.notes[0]) == 2
+        assert len(t.notes[1]) == 2
+
+
+class TestTrackMultiLaneTypeValidation:
+    def test_invalid_element_in_lane_raises_with_lane_and_position(self):
+        from propeller.composition import Track
+        from propeller.notes import C4
+        with pytest.raises(PropellerValidationError) as exc_info:
+            Track(name="x", channel=1, instrument=0,
+                  notes=[[C4(), "bad"]])
+        msg = str(exc_info.value)
+        assert "lane 1" in msg
+        assert "position 2" in msg
+
+    def test_invalid_element_in_second_lane_raises_with_correct_lane(self):
+        from propeller.composition import Track
+        from propeller.notes import C4
+        with pytest.raises(PropellerValidationError) as exc_info:
+            Track(name="x", channel=1, instrument=0,
+                  notes=[[C4()], ["bad"]])
+        msg = str(exc_info.value)
+        assert "lane 2" in msg
+        assert "position 1" in msg
+
+    def test_valid_multi_lane_passes(self):
+        from propeller.composition import Track
+        from propeller.notes import C4, E4, G4
+        t = Track(name="x", channel=1, instrument=0,
+                  notes=[[C4()], [E4()], [G4()]])
+        assert len(t.notes) == 3
+
+
+class TestTrackMultiLaneVelocityValidation:
+    def test_out_of_range_velocity_in_lane_raises_with_lane_position(self):
+        from propeller.composition import Track
+        from propeller.notes import C4, Note
+        with pytest.raises(PropellerValidationError) as exc_info:
+            Track(name="X", channel=1, instrument=0,
+                  notes=[[C4()], [Note(60, 1.0, 200)]])
+        msg = str(exc_info.value)
+        assert "lane 2" in msg
+        assert "position 1" in msg
+
+    def test_rest_in_lane_does_not_trigger_velocity_check(self):
+        from propeller.composition import Track
+        from propeller.notes import C4, Rest
+        t = Track(name="X", channel=1, instrument=0,
+                  notes=[[C4()], [Rest()]])
+        assert len(t.notes) == 2
+
+
 class TestTopLevelImport:
     def test_import_track_and_project(self):
         from propeller import project, track

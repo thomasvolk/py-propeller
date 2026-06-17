@@ -47,6 +47,37 @@ project(
 - the velocity is by default 100
 - the velocity value can be be set a parameter of the note, e.g. C4(120) means that the note C4 should be played with a velocity of 120
 
+### Overlapping notes
+
+The propeller engine supports playing overlapping notes by setting the start-tick for every note explicitly.
+py-propeller calculates the start-tick of a note by summarizing the duration of its predecessor.
+Nevertheless, to support overlapping of notes the py-propeller uses a trick by allowing multiple lanes per track.
+- Lanes are organized as list of lists `notes = [ [C4], [E4] ]`.
+- This feature is optional: If `notes` is a flat list, it will be handled as one lane.
+- The start-tick of a note will be calculated in every lane independently.
+- If all notes have calculates start-ticks the lanes will be flatten to one result list - py-propeller will detect this automatically.
+
+This is an example for a c major chord. The start-tick of all three notes will be 0.
+```python
+    track(
+        name = "Piano",
+        channel = 2,
+        instrument = 0,
+        notes = [
+            [
+                C4(),
+            ],
+            [
+                E4(), 
+            ],
+            [
+                G4(), 
+            ]
+        ]
+    )
+```
+
+
 ## Uploading to the Engine
 
 When you call the `.play()` method on the project, it will transform the project to the propeller JSON format and upload it to the engine via socket. The engine will then start playing the project immediately.

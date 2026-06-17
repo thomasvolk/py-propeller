@@ -48,7 +48,7 @@ with the socket path and a suggestion to verify the engine is running.
 | F-6 | Validation errors raised by `track()` and `project()` occur at construction time — before `.play()` opens any socket connection. |
 | F-7 | Socket connection failures (refused, timeout, unreachable) are caught inside `.play()` and re-raised as `PropellerConnectionError` with a message that includes the socket path and a suggestion to verify the engine is running. |
 | F-8 | Raw low-level exceptions (`socket.error`, `OSError`, `ConnectionRefusedError`, etc.) must not propagate to the user unhandled; they may appear only as the `__cause__` of a `PropellerConnectionError`. |
-| F-9 | When `track()` iterates its `notes` list during construction and encounters a note with an invalid value, the error message must include the note's position within the flat `notes` list using a 1-based index (e.g. `"Invalid velocity at position 3: value 150 exceeds maximum 127"`). There is no bar-index context since bar grouping within tracks has been removed from the DSL. |
+| F-9 | When `track()` iterates its `notes` list during construction and encounters a note with an invalid velocity value, the error message must include position context using 1-based indices. For the flat (single-lane) form, the message includes the position in the flat list (e.g. `"Invalid velocity at position 3: value 150 exceeds maximum 127"`). For the multi-lane form, the message includes both the lane index and the position within that lane (e.g. `"Invalid velocity at lane 2, position 1: value 150 exceeds maximum 127"`). |
 | F-10 | The library defines `PropellerError` as its base exception class. `PropellerValidationError` (DSL/structural errors) and `PropellerConnectionError` (transport errors) are subclasses, allowing callers to catch all library errors with a single `except PropellerError` clause. `PropellerResponseError` is out of scope for Epic 6. |
 
 ---
@@ -77,7 +77,8 @@ with the socket path and a suggestion to verify the engine is running.
 | AC-8  | `project()` is called with a `time_signature` that is not a two-element tuple of positive integers | `project()` is called | `PropellerValidationError` is raised naming the field `time_signature` |
 | AC-9  | A valid DSL project is built but the engine is not reachable | `.play()` is called | `PropellerConnectionError` is raised with a message containing the socket path and an actionable suggestion; the raw socket exception is accessible as `__cause__` |
 | AC-10 | Any validation error is raised by `track()` or `project()` | `.play()` is subsequently not called | No socket connection is ever attempted |
-| AC-11 | `track()` iterates its `notes` list and encounters a note with an out-of-range value | `track()` is called | `PropellerValidationError` is raised and the message includes the note's 1-based position in the flat `notes` list (e.g. "position 3") — no bar index is included |
+| AC-11 | `track()` iterates its flat `notes` list and encounters a note with an out-of-range velocity | `track()` is called | `PropellerValidationError` is raised and the message includes the note's 1-based position in the flat list (e.g. "position 3") — no lane context for single-lane tracks |
+| AC-14 | `track()` is called with multi-lane `notes` and encounters an out-of-range velocity in lane 2, position 1 | `track()` is called | `PropellerValidationError` is raised and the message includes both the 1-based lane index and position (e.g. "lane 2, position 1") |
 | AC-12 | `PropellerValidationError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerValidationError` is a subclass of `PropellerError` |
 | AC-13 | `PropellerConnectionError` is raised | The caller uses `except PropellerError` | The exception is caught, confirming `PropellerConnectionError` is a subclass of `PropellerError` |
 
@@ -123,3 +124,9 @@ with the socket path and a suggestion to verify the engine is running.
 - Reconciled: Q8-A → F-3 (raise `PropellerValidationError` immediately on out-of-range velocity), AC-1 (concrete Given/When/Then; clamping option removed)
 - Removed: Q8 (fully resolved); UJ-1 pending note removed
 - No open questions remain; PRD is complete
+
+### Cycle 7 — Confidence: 93%
+- Context: briefing.md updated with multi-lane overlapping notes requirement.
+- F-9 updated: position context is single-index for flat notes and lane+position for multi-lane notes.
+- AC-11 updated: clarified as flat-list case only.
+- AC-14 added: multi-lane velocity validation error includes "lane N, position M" context.

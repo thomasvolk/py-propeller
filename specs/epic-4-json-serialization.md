@@ -44,6 +44,13 @@ channel 2). The serializer produces a `tracks` list with one entry per track, ea
 `channel`, `instrument`, and independent `notes` array. All tracks share the same
 `loop_duration` in the header.
 
+### UJ-5 · Serialize a track with overlapping notes (multiple lanes)
+
+A developer has built a track with `notes=[[C4()], [E4()], [G4()]]` (three lanes, one note
+each). After serialization, the `notes` array contains three entries all with `start_tick`
+of 0. A more complex example — `notes=[[C4(), D4()], [E4()]]` — yields C4 and E4 at tick 0
+and D4 at tick 480. All lane results are merged into a single flat list sorted by start_tick.
+
 ### UJ-4 · Use stub domain model during parallel development
 
 While Epic 3 is still in progress, a developer defines minimal Python `@dataclass` objects with
@@ -64,13 +71,15 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 | F-6 | The returned dict contains a `"tracks"` list, one entry per track in the project. |
 | F-7 | Each track entry is a dict with keys `"name"` (string), `"channel"` (integer, 1–16, 1-indexed), `"instrument"` (integer, 0–127), and `"notes"` (list of 4-element integer arrays). |
 | F-8 | Each pitched note maps to a 4-element integer array `[start_tick, duration_ticks, pitch, velocity]`. |
-| F-9 | `start_tick` for each note is the cumulative tick offset from the start of the loop (sum of all preceding note and rest durations in ticks within the same track). |
+| F-9 | `start_tick` for each note is the cumulative tick offset from the start of the loop, computed per lane. For single-lane tracks, this is the sum of all preceding note and rest durations in ticks within the track. For multi-lane tracks, each lane maintains its own independent tick cursor starting at 0. |
 | F-10 | Note and rest durations from the DSL are converted to ticks using a fixed PPQN of 480 ticks per beat. |
 | F-11 | Rest values in a track advance the tick cursor but produce no entry in the `notes` array. |
 | F-12 | When `beats × PPQN` is not a whole number, the result is rounded to the nearest integer using Python's built-in `round()`. |
 | F-13 | The serializer performs no network I/O, file I/O, or other side effects; it is a pure function of its input. |
 | F-14 | The serializer has no import dependency on the transport layer (Epic 2). |
-| F-15 | The stub domain model used during parallel development consists of Python `@dataclass` objects with the same field names expected from Epic 3: `project.bpm`, `project.time_signature`, `project.bars`, `project.tracks`; `track.name`, `track.channel`, `track.instrument`, `track.notes` (flat list of note/rest objects, each with `.duration_beats`, `.pitch`, and `.velocity` attributes). |
+| F-15 | The stub domain model used during parallel development consists of Python `@dataclass` objects with the same field names expected from Epic 3: `project.bpm`, `project.time_signature`, `project.bars`, `project.tracks`; `track.name`, `track.channel`, `track.instrument`, `track.notes` — either a flat list or a list of lists, mirroring the Epic 3 dual-form contract. |
+| F-16 | When `track.notes` is a list of lists (multi-lane form, detected by `isinstance(track.notes[0], list)`), each inner list is serialized as an independent lane with its own tick cursor starting at 0. The multi-lane form is detected the same way as in Epic 3 F-14. |
+| F-17 | All lane results are merged into a single flat `notes` list, sorted by `start_tick` in ascending order. For equal start-ticks, lane declaration order is preserved (stable sort). |
 
 ---
 
@@ -98,6 +107,8 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 | AC-8  | The serializer module | imported in isolation (no socket, no engine) | It imports without error and is callable |
 | AC-9  | A project with `bars=3` and `time_signature=(4, 4)` | `serialize(project)` is called | `result["header"]["loop_duration"]` equals `5760` (3 × 4 × 480) |
 | AC-10 | A note whose beat duration × 480 is not a whole number (e.g. a triplet `1/3` beat) | `serialize(project)` is called | `duration_ticks` is `round(beats * 480)` (nearest integer, no exception raised) |
+| AC-11 | A track with `notes=[[C4(80)], [E4(80)], [G4(80)]]` (C4=pitch 60, E4=pitch 64, G4=pitch 67, 1 beat each) | `serialize(project)` is called | The `notes` array contains exactly three entries, all with `start_tick=0`, in lane-declaration order |
+| AC-12 | A track with `notes=[[C4(), D4()], [E4()]]` (lane 1: C4 then D4; lane 2: E4) | `serialize(project)` is called | The `notes` array contains three entries: C4 and E4 at `start_tick=0`, D4 at `start_tick=480`; merged and sorted by start_tick |
 
 ---
 
@@ -128,6 +139,16 @@ stubs, deferring integration with the real domain model until Epic 3 is complete
 - F-15 stub model updated: `track.notes` flat list.
 - AC-3, AC-9, AC-10 rewritten to remove bar-count derivation.
 - Added: Q8 (role of time_signature in loop_duration with bars concept removed)
+
+### Cycle 6 — Confidence: 90%
+- Context: briefing.md updated with multi-lane overlapping notes requirement.
+- UJ-5 added: serialization of multi-lane overlapping notes.
+- F-9 updated: start_tick computed per lane for multi-lane tracks.
+- F-15 updated: stub model `track.notes` supports both flat and list-of-lists forms.
+- F-16 added: multi-lane detection and per-lane serialization with independent tick cursors.
+- F-17 added: lane results merged and sorted by start_tick (stable; lane order preserved on ties).
+- AC-11 added: three-lane chord → all notes at start_tick=0.
+- AC-12 added: two-lane mixed track → merged and sorted result.
 
 ### Cycle 5 — Confidence: 92%
 - Reconciled: Q8 (and Epic 3 Q7) → `bars=N` restored on `project()` as an explicit loop-length parameter.

@@ -288,6 +288,77 @@ class TestFractionalTickRounding:
 # T-10: import in isolation (no socket, no engine)
 # ---------------------------------------------------------------------------
 
+class TestMultiLaneSerialization:
+    def test_three_lane_chord_all_at_tick_zero(self):
+        from propeller.serializer import serialize
+        # C4=60, E4=64, G4=67, each 1 beat, in separate lanes
+        lane1 = [StubNote(duration=1, pitch=60, velocity=80)]
+        lane2 = [StubNote(duration=1, pitch=64, velocity=80)]
+        lane3 = [StubNote(duration=1, pitch=67, velocity=80)]
+        t = StubTrack(name="Piano", channel=1, instrument=0,
+                      notes=[lane1, lane2, lane3])
+        p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
+        notes_out = serialize(p)['tracks'][0]['notes']
+        assert len(notes_out) == 3
+        assert all(n[0] == 0 for n in notes_out)
+
+    def test_three_lane_chord_pitches_in_declaration_order(self):
+        from propeller.serializer import serialize
+        lane1 = [StubNote(duration=1, pitch=60, velocity=80)]
+        lane2 = [StubNote(duration=1, pitch=64, velocity=80)]
+        lane3 = [StubNote(duration=1, pitch=67, velocity=80)]
+        t = StubTrack(name="Piano", channel=1, instrument=0,
+                      notes=[lane1, lane2, lane3])
+        p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
+        notes_out = serialize(p)['tracks'][0]['notes']
+        pitches = [n[2] for n in notes_out]
+        assert pitches == [60, 64, 67]
+
+    def test_two_lane_mixed_sorted_by_start_tick(self):
+        from propeller.serializer import serialize
+        # lane 1: C4 (tick 0), D4 (tick 480)
+        # lane 2: E4 (tick 0)
+        # merged + sorted: C4(0), E4(0), D4(480)
+        lane1 = [StubNote(duration=1, pitch=60, velocity=100),
+                 StubNote(duration=1, pitch=62, velocity=100)]
+        lane2 = [StubNote(duration=1, pitch=64, velocity=100)]
+        t = StubTrack(name="Piano", channel=1, instrument=0,
+                      notes=[lane1, lane2])
+        p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
+        notes_out = serialize(p)['tracks'][0]['notes']
+        assert len(notes_out) == 3
+        assert notes_out[0] == [0, 480, 60, 100]   # C4
+        assert notes_out[1] == [0, 480, 64, 100]   # E4 (lane 2)
+        assert notes_out[2] == [480, 480, 62, 100]  # D4
+
+    def test_multi_lane_with_rest_in_lane(self):
+        from propeller.serializer import serialize
+        # lane 1: rest(1 beat) then C4
+        # lane 2: E4 at tick 0
+        lane1 = [StubRest(duration=1), StubNote(duration=1, pitch=60, velocity=100)]
+        lane2 = [StubNote(duration=1, pitch=64, velocity=100)]
+        t = StubTrack(name="Piano", channel=1, instrument=0,
+                      notes=[lane1, lane2])
+        p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
+        notes_out = serialize(p)['tracks'][0]['notes']
+        assert len(notes_out) == 2
+        # E4 at 0, C4 at 480
+        ticks = {n[2]: n[0] for n in notes_out}
+        assert ticks[64] == 0
+        assert ticks[60] == 480
+
+    def test_empty_inner_lane_produces_no_notes(self):
+        from propeller.serializer import serialize
+        lane1 = [StubNote(duration=1, pitch=60, velocity=100)]
+        lane2 = []
+        t = StubTrack(name="Piano", channel=1, instrument=0,
+                      notes=[lane1, lane2])
+        p = StubProject(bpm=120, time_signature=(4, 4), bars=1, tracks=[t])
+        notes_out = serialize(p)['tracks'][0]['notes']
+        assert len(notes_out) == 1
+        assert notes_out[0][2] == 60
+
+
 class TestImportIsolation:
     def test_import_without_engine(self):
         result = subprocess.run(
