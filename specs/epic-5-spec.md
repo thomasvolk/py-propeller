@@ -8,7 +8,8 @@ The implementation lives in a new `propeller/player.py` module; `Project.play()`
 `composition.py` delegates to it via a lazy import to avoid circular dependencies. Calling
 `.play()` serializes the project, sends `create-project` then `loop-start` to the engine over
 the Unix socket, then blocks with `time.sleep()` until Ctrl+C — which triggers `loop-stop` and
-a clean `sys.exit(0)`.
+a clean `sys.exit(0)`. When `-n` is in `sys.argv`, dry-run mode activates: JSON payloads are
+printed to stdout instead of sent, and `.play()` returns immediately without blocking.
 
 **Confidence Level:** 92% — All decisions resolved; architecture, data model, and task table fully
 cover every F-x and AC-x. Residual 8%: NF-2 (shutdown < 2 s) has no explicit timing test —
@@ -68,6 +69,11 @@ Per Epic 2, each `PropellerClient().send(payload)` call owns its full connection
 (open → send newline-terminated UTF-8 → recv response → close). `play()` creates a fresh
 `PropellerClient()` instance per command and does not manage sockets directly.
 
+**Dry-run mode:** At the top of `play(project)`, check `"-n" in sys.argv`. When true, build
+both command dicts as normal, call `print(json.dumps(cmd))` for each (create-project, then
+loop-start), and return immediately — no `PropellerClient` is instantiated, no socket is
+opened, no blocking loop is entered. This satisfies F-10, F-11, F-12, AC-9.
+
 **Exit behaviour:** `sys.exit(0)` in the `KeyboardInterrupt` handler raises `SystemExit(0)`.
 Python exits cleanly without printing a traceback for `SystemExit`, satisfying NF-3 and NF-5.
 
@@ -90,12 +96,14 @@ that raises `KeyboardInterrupt` on the first call.
 
 **`play(project) -> None`** — public entry point.
 
-1. Calls `serialize(project)` to get the payload dict.
-2. Sends `create-project` via `PropellerClient().send()`. If the call raises, the exception
+1. Checks `"-n" in sys.argv`. If true (dry-run mode): build `create-project` and `loop-start`
+   command dicts, print each as a JSON line to stdout, then return.
+2. Calls `serialize(project)` to get the payload dict.
+3. Sends `create-project` via `PropellerClient().send()`. If the call raises, the exception
    propagates uncaught (no suppression for non-shutdown errors).
-3. Sends `loop-start` via `PropellerClient().send()`.
-4. Enters `while True: time.sleep(1)`.
-5. On `KeyboardInterrupt`: sends `loop-stop` (all exceptions suppressed via `except Exception:
+4. Sends `loop-start` via `PropellerClient().send()`.
+5. Enters `while True: time.sleep(1)`.
+6. On `KeyboardInterrupt`: sends `loop-stop` (all exceptions suppressed via `except Exception:
    pass`), then calls `sys.exit(0)`.
 
 Module-level imports: `json`, `sys`, `time`, `from propeller.serializer import serialize`,
@@ -151,6 +159,8 @@ Tasks are ordered TDD-first: every test task must appear before the impl task it
 | T-8 | Test: `PropellerConnectionError` raised by `create-project` send propagates uncaught from `play()` (not absorbed by the shutdown handler) | test | F-8 | I-6 |
 | T-9 | Test: `Project.play()` method exists and is callable; calling it with a patched `propeller.player.play` verifies delegation (assert inner `play` was called with the project instance) | test | UJ-1 | I-6 |
 | I-7 | Add `play()` method to `Project` in `composition.py`; lazily import and call `propeller.player.play(self)` | impl | UJ-1 | T-9 |
+| T-10 | Test: with `sys.argv` patched to include `"-n"`, call `play(stub_project)` and assert stdout contains two JSON lines (`create-project` and `loop-start`), `PropellerClient` is never instantiated, and the call returns (does not block or raise `SystemExit`) | test | F-10, F-11, F-12, AC-9 | I-7 |
+| I-8 | Add dry-run guard at the top of `play()`: `if "-n" in sys.argv:` — build both command dicts, `print(json.dumps(...))` each, return | impl | F-10, F-11, F-12 | T-10 |
 
 ---
 
@@ -175,3 +185,6 @@ None — all decisions resolved.
 ### Cycle 2 — Confidence: 92%
 - Reconciled: D-1 → A (standalone `player.py`; architecture already reflected this — no changes needed); D-2 → A (`mock.patch` strategy; test isolation section already reflected this — no changes needed)
 - Added: nothing — specification is complete
+
+### Cycle 3 — Confidence: 92%
+- Reconciled: dry-run feature from briefing update — dry-run overview paragraph, `play()` step 1, "Dry-run mode" architecture block, T-10/I-8 task rows added; no existing tasks or decisions changed

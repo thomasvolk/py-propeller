@@ -60,3 +60,10 @@ The execution of the script will block until you stop it, so you can keep it run
 ```
 python my_project.py
 ```
+
+## Dry run
+
+For debugging purpose a dry run is possible by adding the parameter `-n`.
+Instead of communicating to the socked, all JSON data will be printed to the console. 
+In dry run mode the `.play()` is non blocking.
+

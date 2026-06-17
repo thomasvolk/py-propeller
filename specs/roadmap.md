@@ -92,8 +92,9 @@ Wire together the DSL, serialization, and transport into the `.play()` method.
 
 - `project(...).play()` serializes the project and sends it to the engine
 - The script blocks after sending and remains running until interrupted
-- Engine host and port are configurable without code changes
+- The socket path is configurable via `PROPELLER_SOCK` without code changes
 - Clean shutdown on interrupt (e.g., Ctrl+C) is handled gracefully
+- Running with `-n` prints JSON payloads to stdout and exits immediately without connecting to the engine
 
 ---
 

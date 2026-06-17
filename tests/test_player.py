@@ -12,7 +12,7 @@ def _make_stub_project():
         name='lead',
         channel=1,
         instrument=1,
-        notes=[StubNote(duration_beats=1.0, pitch=60, velocity=80)],
+        notes=[StubNote(duration=1.0, pitch=60, velocity=80)],
     )
     return StubProject(bpm=120, time_signature=(4, 4), bars=2, tracks=[track])
 
@@ -315,3 +315,62 @@ class TestProjectPlayMethod:
             project.play()
 
         assert mock_play.call_args[0][0] is project
+
+
+# ---------------------------------------------------------------------------
+# T-10: dry-run mode (-n flag)
+# ---------------------------------------------------------------------------
+
+class TestDryRun:
+    def test_dry_run_prints_two_json_lines(self, capsys):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            with mock.patch('sys.argv', ['script.py', '-n']):
+                play(project)
+
+        captured = capsys.readouterr()
+        lines = [l for l in captured.out.splitlines() if l.strip()]
+        assert len(lines) == 2
+        first = json.loads(lines[0])
+        second = json.loads(lines[1])
+        assert first['command'] == 'create-project'
+        assert 'header' in first
+        assert 'tracks' in first
+        assert second == {'command': 'loop-start'}
+
+    def test_dry_run_no_socket_opened(self, capsys):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            with mock.patch('sys.argv', ['script.py', '-n']):
+                play(project)
+
+        mock_client_cls.assert_not_called()
+
+    def test_dry_run_returns_immediately(self, capsys):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient'):
+            with mock.patch('propeller.player.time') as mock_time:
+                with mock.patch('sys.argv', ['script.py', '-n']):
+                    play(project)
+
+        mock_time.sleep.assert_not_called()
+
+    def test_live_mode_unaffected_when_no_flag(self, capsys):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            mock_client_cls.return_value = mock.MagicMock()
+            with mock.patch('propeller.player.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('sys.argv', ['script.py']):
+                    with pytest.raises(SystemExit):
+                        play(project)
+
+        assert mock_client_cls.called
