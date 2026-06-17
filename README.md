@@ -126,6 +126,31 @@ PROPELLER_SOCK=/var/run/propeller.sock python my_project.py
 
 `project(...).play()` sends a `create-project` command followed by `loop-start` and then blocks. Pressing Ctrl+C sends `loop-stop` and exits cleanly.
 
+### Dry-run mode
+
+Add `-n` to inspect the JSON payloads that would be sent to the engine without actually connecting:
+
+```
+python my_project.py -n
+```
+
+Each command is printed to stdout as a JSON line and the script exits immediately. Useful for debugging serialization before a live engine is available.
+
+### Non-blocking mode
+
+Pass `-s` with a state value to start or stop playback without keeping the script running:
+
+```
+python my_project.py -s active     # start or update the project
+python my_project.py -s inactive   # stop the loop
+```
+
+`-s active` first queries the engine to check whether a project is already loaded. If none is present it sends `create-project`; if one exists it sends `modify-project`. Either way it follows up with `loop-start` and then exits immediately (exit code 0).
+
+`-s inactive` sends `loop-stop` and exits immediately.
+
+The `-s` flag has no effect when `-n` is also present — dry-run mode takes precedence.
+
 ## Features
 
 - Expressive note DSL: `C4(120) * 2`, `Ef4 * 0.5`, `Z * 4`
@@ -134,10 +159,12 @@ PROPELLER_SOCK=/var/run/propeller.sock python my_project.py
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
 - Graceful Ctrl+C shutdown
+- Dry-run mode (`-n`) to print JSON payloads without connecting
+- Non-blocking mode (`-s active` / `-s inactive`) for scripted start/stop
 
 ## Contributing
 
-To report a bug or request a feature, open an issue in the project repository. To contribute code, fork the repository and open a merge request. Include tests for any new behaviour and follow the existing code style.
+Contributions are welcome. To report a bug or request a feature, open an issue at <https://github.com/thomasvolk/py-propeller/issues>. To contribute code, fork <https://github.com/thomasvolk/py-propeller>, make your changes on a branch, and open a pull request. Include tests for any new behaviour and follow the existing code style.
 
 ## Support
 
