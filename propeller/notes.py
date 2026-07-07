@@ -4,6 +4,24 @@ from propeller.errors import PropellerValidationError
 
 __all__: list[str] = []
 
+
+@dataclasses.dataclass(frozen=True)
+class PitchBend:
+    value: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not (-1.0 <= self.value <= 1.0):
+            raise PropellerValidationError(
+                f'pitch bend value {self.value} is outside the valid range [-1.0, 1.0]'
+            )
+
+    def __call__(self, value: float) -> 'PitchBend':
+        return PitchBend(value)
+
+
+PB = PitchBend()
+__all__.append('PB')
+
 _SEMITONES: list[tuple[str, ...]] = [
     ('C',),
     ('Cs', 'Df'),

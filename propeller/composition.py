@@ -1,7 +1,7 @@
 import dataclasses
 
 from propeller.errors import PropellerValidationError
-from propeller.notes import Note, Rest
+from propeller.notes import Note, PitchBend, Rest
 
 
 @dataclasses.dataclass(frozen=True)
@@ -24,27 +24,36 @@ class Track:
             raise PropellerValidationError('name must be a non-empty string')
         if self.notes and isinstance(self.notes[0], list):
             for lane_i, lane in enumerate(self.notes, start=1):
-                for pos_i, note in enumerate(lane, start=1):
-                    if not isinstance(note, (Note, Rest)):
-                        raise PropellerValidationError(
-                            f'lane {lane_i}, position {pos_i}: not a Note or Rest instance'
-                        )
-                    if isinstance(note, Note) and not (0 <= note.velocity <= 127):
+                self._validate_lane(lane, lane_i)
+        else:
+            self._validate_lane(self.notes)
+
+    def _validate_lane(self, lane, lane_i=None) -> None:
+        prev_was_pb = False
+        for pos_i, note in enumerate(lane, start=1):
+            if not isinstance(note, (Note, Rest, PitchBend)):
+                loc = f'lane {lane_i}, position {pos_i}' if lane_i else f'notes[{pos_i}]'
+                suffix = 'not a Note, Rest, or PitchBend instance' if lane_i else 'is not a Note or Rest instance'
+                raise PropellerValidationError(f'{loc}: {suffix}')
+            if isinstance(note, PitchBend):
+                if prev_was_pb:
+                    raise PropellerValidationError(
+                        'consecutive pitch-bend elements are not permitted'
+                    )
+                prev_was_pb = True
+            else:
+                if isinstance(note, Note) and not (0 <= note.velocity <= 127):
+                    if lane_i:
                         raise PropellerValidationError(
                             f'Invalid velocity at lane {lane_i}, position {pos_i}: '
                             f'value {note.velocity} exceeds valid range [0, 127]'
                         )
-        else:
-            for i, note in enumerate(self.notes, start=1):
-                if not isinstance(note, (Note, Rest)):
-                    raise PropellerValidationError(
-                        f'notes[{i}] is not a Note or Rest instance'
-                    )
-                if isinstance(note, Note) and not (0 <= note.velocity <= 127):
-                    raise PropellerValidationError(
-                        f'Invalid velocity at position {i}: value {note.velocity} '
-                        f'exceeds valid range [0, 127]'
-                    )
+                    else:
+                        raise PropellerValidationError(
+                            f'Invalid velocity at position {pos_i}: value {note.velocity} '
+                            f'exceeds valid range [0, 127]'
+                        )
+                prev_was_pb = False
 
 
 @dataclasses.dataclass(frozen=True)
