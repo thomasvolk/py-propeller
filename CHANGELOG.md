@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0] — 2026-07-07
+
+### Added
+
+- Serialization now raises `PropellerValidationError` when two lanes of the same track produce a pitch bend at the same tick offset, preventing ambiguous MIDI output.
+
+### Fixed
+
+- Pitch bends placed in lanes that contain only rests and pitch bend elements are now correctly included in the serialized output at their proper tick offsets; previously they were silently discarded.
+- All pitch bends in a PB-only lane are emitted when multiple pitch bends are separated by rests; previously only the last pending pitch bend was kept and intermediate ones were silently overwritten.
+
+### Internal
+
+- Added technical specification and dedicated test suite for pitch bend lane combination behaviour.
+
+---
+
 ## [0.2.0] — 2026-07-07
 
 ### Added
