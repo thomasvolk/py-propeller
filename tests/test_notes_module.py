@@ -63,7 +63,7 @@ class TestNoteConstants:
         all_pitches = {
             getattr(notes_module, name).pitch
             for name in notes_module.__all__
-            if name not in ('Z', 'z')
+            if isinstance(getattr(notes_module, name), Note)
         }
         # C0=12 through C8=108; all 12 semitones per octave
         for octave in range(9):
@@ -95,9 +95,10 @@ class TestStarImport:
         for name in notes_module.__all__:
             assert not name.startswith('_'), f'internal name {name!r} in __all__'
 
-    def test_all_exported_names_are_note_or_rest(self):
+    def test_all_exported_names_are_note_rest_or_pitch_bend(self):
+        from propeller.notes import PitchBend
         for name in notes_module.__all__:
             obj = getattr(notes_module, name)
-            assert isinstance(obj, (Note, Rest)), (
-                f'{name!r} in __all__ is not a Note or Rest'
+            assert isinstance(obj, (Note, Rest, PitchBend)), (
+                f'{name!r} in __all__ is not a Note, Rest, or PitchBend'
             )

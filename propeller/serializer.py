@@ -1,4 +1,4 @@
-from propeller.notes import Rest
+from propeller.notes import PitchBend, Rest
 
 PPQN: int = 480
 
@@ -7,34 +7,56 @@ def _beats_to_ticks(beats: float) -> int:
     return round(beats * PPQN)
 
 
-def _serialize_lane(lane) -> list:
+def _pb_to_int(value: float) -> int:
+    return int(round((value + 1.0) / 2.0 * 16383))
+
+
+def _serialize_lane(lane) -> tuple[list, list]:
     tick_cursor = 0
     notes_out = []
+    pitch_bends_out = []
+    pending_pb_value: float | None = None
+    pending_pb_tick: int = 0
     for item in lane:
+        if isinstance(item, PitchBend):
+            pending_pb_value = item.value
+            pending_pb_tick = tick_cursor
+            continue
         duration_ticks = _beats_to_ticks(item.duration)
         if isinstance(item, Rest):
             tick_cursor += duration_ticks
         else:
+            if pending_pb_value is not None:
+                pitch_bends_out.append([pending_pb_tick, _pb_to_int(pending_pb_value)])
+                pending_pb_value = None
             notes_out.append([tick_cursor, duration_ticks, item.pitch, item.velocity])
             tick_cursor += duration_ticks
-    return notes_out
+    # Trailing PB with no following note is silently discarded (F-8)
+    return notes_out, pitch_bends_out
 
 
 def _serialize_track(track) -> dict:
     notes = track.notes
     if notes and isinstance(notes[0], list):
         all_notes = []
+        all_pitch_bends = []
         for lane in notes:
-            all_notes.extend(_serialize_lane(lane))
+            lane_notes, lane_pbs = _serialize_lane(lane)
+            all_notes.extend(lane_notes)
+            all_pitch_bends.extend(lane_pbs)
         notes_out = sorted(all_notes, key=lambda n: n[0])
+        pitch_bends_out = sorted(all_pitch_bends, key=lambda pb: pb[0])
     else:
-        notes_out = _serialize_lane(notes)
-    return {
+        notes_out, pitch_bends_out = _serialize_lane(notes)
+    result = {
         'name': track.name,
         'channel': track.channel,
         'instrument': track.instrument,
         'notes': notes_out,
     }
+    if pitch_bends_out:
+        result['pitch-bends'] = pitch_bends_out
+    return result
 
 
 def serialize(project) -> dict:
