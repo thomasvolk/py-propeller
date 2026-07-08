@@ -322,7 +322,7 @@ class TestProjectPlayMethod:
 # ---------------------------------------------------------------------------
 
 class TestDryRun:
-    def test_dry_run_prints_two_json_lines(self, capsys):
+    def test_dry_run_prints_one_json_line(self, capsys):
         from propeller.player import play
         project = _make_stub_project()
 
@@ -332,13 +332,10 @@ class TestDryRun:
 
         captured = capsys.readouterr()
         lines = [l for l in captured.out.splitlines() if l.strip()]
-        assert len(lines) == 2
-        first = json.loads(lines[0])
-        second = json.loads(lines[1])
-        assert first['command'] == 'create-project'
-        assert 'header' in first
-        assert 'tracks' in first
-        assert second == {'command': 'loop-start'}
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
+        assert 'header' in payload
+        assert 'tracks' in payload
 
     def test_dry_run_no_socket_opened(self, capsys):
         from propeller.player import play
@@ -551,9 +548,10 @@ class TestDryRunPrecedenceOverStateActive:
         mock_client_cls.assert_not_called()
         captured = capsys.readouterr()
         lines = [l for l in captured.out.splitlines() if l.strip()]
-        assert len(lines) == 2
-        assert json.loads(lines[0])['command'] == 'create-project'
-        assert json.loads(lines[1]) == {'command': 'loop-start'}
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
+        assert 'header' in payload
+        assert 'tracks' in payload
 
 
 # ---------------------------------------------------------------------------
@@ -572,9 +570,10 @@ class TestDryRunPrecedenceOverStateInactive:
         mock_client_cls.assert_not_called()
         captured = capsys.readouterr()
         lines = [l for l in captured.out.splitlines() if l.strip()]
-        assert len(lines) == 2
-        assert json.loads(lines[0])['command'] == 'create-project'
-        assert json.loads(lines[1]) == {'command': 'loop-start'}
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
+        assert 'header' in payload
+        assert 'tracks' in payload
 
 
 # ---------------------------------------------------------------------------
@@ -652,6 +651,7 @@ class TestDryRunPrecedenceOverStateSync:
         mock_client_cls.assert_not_called()
         captured = capsys.readouterr()
         lines = [l for l in captured.out.splitlines() if l.strip()]
-        assert len(lines) == 2
-        assert json.loads(lines[0])['command'] == 'create-project'
-        assert json.loads(lines[1]) == {'command': 'loop-start'}
+        assert len(lines) == 1
+        payload = json.loads(lines[0])
+        assert 'header' in payload
+        assert 'tracks' in payload
