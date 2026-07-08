@@ -147,6 +147,27 @@ track(
 
 A flat `notes=[...]` list continues to work as a single lane. The two forms cannot be mixed within the same track.
 
+### Pitch bend
+
+`PB(value)` inserts a pitch bend event into a note sequence. `value` ranges from `-1.0` (full bend down) through `0.0` (centered) to `1.0` (full bend up):
+
+```python
+from propeller.notes import *
+
+track(
+    name="Lead",
+    channel=1,
+    instrument=0,
+    notes=[
+        PB(0.0),  C4(100),
+        PB(0.5),  C4(100),
+        PB(-0.5), C4(100),
+    ],
+)
+```
+
+A pitch bend fires at its own position in the sequence and does not itself consume any duration — placing a rest between a `PB(...)` and the next note delays the note, not the bend. Consecutive `PB(...)` calls with no note or rest between them are not permitted. See `examples/pitch_bend_example.py` for a full example.
+
 ### Transport configuration
 
 py-propeller connects to the engine via Unix domain socket at `/tmp/propeller.sock` by default. Override with an environment variable:
@@ -176,11 +197,14 @@ Pass `-s` with a state value to start or stop playback without keeping the scrip
 ```
 python my_project.py -s active     # start or update the project
 python my_project.py -s inactive   # stop the loop
+python my_project.py -s sync       # push project data only; let an external clock own transport
 ```
 
 `-s active` first queries the engine to check whether a project is already loaded. If none is present it sends `create-project`; if one exists it sends `modify-project`. Either way it follows up with `loop-start` and then exits immediately (exit code 0).
 
 `-s inactive` sends `loop-stop` and exits immediately.
+
+`-s sync` sends `create-project` and exits immediately. It never sends `loop-start` or `loop-stop`, so an external clock source — a DAW or hardware sequencer — retains full control of transport start and stop while py-propeller only delivers project data.
 
 The `-s` flag has no effect when `-n` is also present — dry-run mode takes precedence.
 
@@ -203,12 +227,14 @@ python examples/beat_example.py -s inactive
 - Expressive note DSL: `C4(120) * 2`, `Ef4 * 0.5`, `Z * 4`
 - All MIDI pitches across octaves 0–8 with sharp and flat aliases
 - Multi-lane tracks for chords and polyphony: `notes=[[C4()], [E4()], [G4()]]`
+- Pitch bend support via `PB(value)` for expressive pitch modulation
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
 - Graceful Ctrl+C shutdown
 - Dry-run mode (`-n`) to print JSON payloads without connecting
 - Non-blocking mode (`-s active` / `-s inactive`) for scripted start/stop
+- Sync mode (`-s sync`) to hand transport control to an external clock source
 
 ## Contributing
 

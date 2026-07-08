@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0] — 2026-07-08
+
+### Added
+
+- New `-s sync` mode: sends `create-project` to the engine and exits immediately, without ever sending `loop-start` or `loop-stop`, so an external clock source (a DAW or hardware sequencer) can own the transport lifecycle while py-propeller only delivers project data.
+
+---
+
 ## [0.3.0] — 2026-07-07
 
 ### Added

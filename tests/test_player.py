@@ -575,3 +575,83 @@ class TestDryRunPrecedenceOverStateInactive:
         assert len(lines) == 2
         assert json.loads(lines[0])['command'] == 'create-project'
         assert json.loads(lines[1]) == {'command': 'loop-start'}
+
+
+# ---------------------------------------------------------------------------
+# T-1/T-2: -s sync sends create-project only, exits immediately, no blocking
+# ---------------------------------------------------------------------------
+
+class TestStateSync:
+    def test_sends_create_project_only(self):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            mock_instance = mock.MagicMock()
+            mock_client_cls.return_value = mock_instance
+            with mock.patch('propeller.player.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('sys.argv', ['script.py', '-s', 'sync']):
+                    with pytest.raises(SystemExit):
+                        play(project)
+
+        send_calls = mock_instance.send.call_args_list
+        assert len(send_calls) == 1
+        payload = json.loads(send_calls[0][0][0])
+        assert payload['command'] == 'create-project'
+        assert 'header' in payload
+        assert 'tracks' in payload
+
+    def test_no_loop_start_or_loop_stop_sent(self):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            mock_instance = mock.MagicMock()
+            mock_client_cls.return_value = mock_instance
+            with mock.patch('propeller.player.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('sys.argv', ['script.py', '-s', 'sync']):
+                    with pytest.raises(SystemExit):
+                        play(project)
+
+        send_calls = mock_instance.send.call_args_list
+        for call in send_calls:
+            payload = json.loads(call[0][0])
+            assert payload.get('command') not in ('loop-start', 'loop-stop')
+
+    def test_exits_immediately_with_code_zero(self):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            mock_client_cls.return_value = mock.MagicMock()
+            with mock.patch('propeller.player.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('sys.argv', ['script.py', '-s', 'sync']):
+                    with pytest.raises(SystemExit) as exc_info:
+                        play(project)
+
+        assert exc_info.value.code == 0
+        mock_time.sleep.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# T-4: -n and -s sync together → dry-run takes precedence
+# ---------------------------------------------------------------------------
+
+class TestDryRunPrecedenceOverStateSync:
+    def test_dry_run_output_not_socket(self, capsys):
+        from propeller.player import play
+        project = _make_stub_project()
+
+        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+            with mock.patch('sys.argv', ['script.py', '-n', '-s', 'sync']):
+                play(project)
+
+        mock_client_cls.assert_not_called()
+        captured = capsys.readouterr()
+        lines = [l for l in captured.out.splitlines() if l.strip()]
+        assert len(lines) == 2
+        assert json.loads(lines[0])['command'] == 'create-project'
+        assert json.loads(lines[1]) == {'command': 'loop-start'}

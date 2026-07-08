@@ -17,14 +17,18 @@ def _parse_state() -> str | None:
 def play(project) -> None:
     if '-n' in sys.argv:
         payload = serialize(project)
-        print(json.dumps({'command': 'create-project', **payload}))
-        print(json.dumps({'command': 'loop-start'}))
+        print(json.dumps(payload))
         return
 
     state = _parse_state()
 
     if state == 'inactive':
         PropellerClient().send(json.dumps({'command': 'loop-stop'}))
+        sys.exit(0)
+
+    if state == 'sync':
+        payload = serialize(project)
+        PropellerClient().send(json.dumps({'command': 'create-project', **payload}))
         sys.exit(0)
 
     if state == 'active':
