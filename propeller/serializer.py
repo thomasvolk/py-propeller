@@ -4,15 +4,15 @@ from propeller.notes import PitchBend, Rest
 PPQN: int = 480
 
 
-def _beats_to_ticks(beats: float) -> int:
-    return round(beats * PPQN)
+def _beats_to_ticks(beats: float, denominator: int = 4) -> int:
+    return round(beats * PPQN * 4 / denominator)
 
 
 def _pb_to_int(value: float) -> int:
     return int(round((value + 1.0) / 2.0 * 16383))
 
 
-def _serialize_lane(lane, emit_trailing_pb: bool = False) -> tuple[list, list]:
+def _serialize_lane(lane, denominator: int = 4, emit_trailing_pb: bool = False) -> tuple[list, list]:
     tick_cursor = 0
     notes_out = []
     pitch_bends_out = []
@@ -25,7 +25,7 @@ def _serialize_lane(lane, emit_trailing_pb: bool = False) -> tuple[list, list]:
             pending_pb_value = item.value
             pending_pb_tick = tick_cursor
             continue
-        duration_ticks = _beats_to_ticks(item.duration)
+        duration_ticks = _beats_to_ticks(item.duration, denominator)
         if isinstance(item, Rest):
             tick_cursor += duration_ticks
         else:
@@ -39,13 +39,13 @@ def _serialize_lane(lane, emit_trailing_pb: bool = False) -> tuple[list, list]:
     return notes_out, pitch_bends_out
 
 
-def _serialize_track(track) -> dict:
+def _serialize_track(track, denominator: int = 4) -> dict:
     notes = track.notes
     if notes and isinstance(notes[0], list):
         all_notes = []
         all_pitch_bends = []
         for lane in notes:
-            lane_notes, lane_pbs = _serialize_lane(lane, emit_trailing_pb=True)
+            lane_notes, lane_pbs = _serialize_lane(lane, denominator, emit_trailing_pb=True)
             all_notes.extend(lane_notes)
             all_pitch_bends.extend(lane_pbs)
         ticks = [pb[0] for pb in all_pitch_bends]
@@ -56,7 +56,7 @@ def _serialize_track(track) -> dict:
         notes_out = sorted(all_notes, key=lambda n: n[0])
         pitch_bends_out = sorted(all_pitch_bends, key=lambda pb: pb[0])
     else:
-        notes_out, pitch_bends_out = _serialize_lane(notes)
+        notes_out, pitch_bends_out = _serialize_lane(notes, denominator)
     result = {
         'name': track.name,
         'channel': track.channel,
@@ -69,12 +69,12 @@ def _serialize_track(track) -> dict:
 
 
 def serialize(project) -> dict:
-    beats_per_bar = project.time_signature[0]
-    loop_duration = project.bars * beats_per_bar * PPQN
+    numerator, denominator = project.time_signature
+    loop_duration = round(project.bars * numerator * PPQN * 4 / denominator)
     return {
         'header': {
             'bpm': project.bpm,
             'loop_duration': loop_duration,
         },
-        'tracks': [_serialize_track(t) for t in project.tracks],
+        'tracks': [_serialize_track(t, denominator) for t in project.tracks],
     }
