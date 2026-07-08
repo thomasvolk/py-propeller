@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0] — 2026-07-08
+
+### Changed
+
+- The time signature's denominator now determines the beat unit (quarter, eighth, sixteenth, etc.) used when serializing note and rest durations and computing bar length; previously only the numerator had any effect and the denominator was silently ignored.
+
+### Internal
+
+- Added specification and dedicated test suite for time signature handling.
+
+---
+
 ## [0.4.0] — 2026-07-08
 
 ### Added

@@ -112,7 +112,8 @@ p.play()
 - `channel` — MIDI channel, 1–16
 - `instrument` — General MIDI program number, 0–127
 - `bpm` — beats per minute (positive float)
-- `bars` — number of bars to loop (positive integer)
+- `time_signature` — `(numerator, denominator)`, both positive integers. `numerator` is how many beats make up one bar. `denominator` sets the beat unit: `4` for a quarter-note beat, `8` for an eighth-note beat, `16` for a sixteenth-note beat, and so on — a unit-duration note (e.g. `C4`) always lasts exactly one beat, so changing the denominator changes how long that note plays in real time.
+- `bars` — number of bars to loop (positive integer); purely informational and not cross-validated against note content
 
 ### Overlapping notes (chords and polyphony)
 
