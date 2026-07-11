@@ -72,6 +72,44 @@ Constants cover octaves 0–8. Import them all at once:
 from propeller.notes import *
 ```
 
+### Drum note constants
+
+General MIDI percussion sounds (note numbers 35–81) are available as pre-built `Note` constants in `propeller.notes.drums`, named after their General MIDI Level 1 drum sound with spaces and hyphens removed:
+
+| Constant       | Meaning        | MIDI pitch |
+| -------------- | -------------- | ---------- |
+| `BassDrum1`    | Bass Drum 1     | 36         |
+| `SnareDrum1`   | Snare Drum 1    | 38         |
+| `ClosedHihat`  | Closed Hi-hat   | 42         |
+| `OpenHihat`    | Open Hi-hat     | 46         |
+| `Cowbell`      | Cowbell         | 56         |
+
+Import them all at once, alongside pitch constants:
+
+```python
+from propeller.notes import *
+from propeller.notes.drums import *
+```
+
+Drum constants are ordinary `Note` values, so the same duration and velocity modifiers apply. General MIDI reserves channel 10 for percussion:
+
+```python
+from propeller.notes.drums import SnareDrum1, ClosedHihat
+
+track(
+    name="Drums",
+    channel=10,
+    instrument=0,
+    notes=[
+        ClosedHihat(90) * 0.5,
+        ClosedHihat(90) * 0.5,
+        SnareDrum1(110),
+    ],
+)
+```
+
+General MIDI Level 2 percussion additions (e.g. Shaker, Sticks) are not included.
+
 ### Duration and velocity
 
 Multiply a note by a beat count to set its duration. Call a note with a velocity value (0–127) to override the default of 100:
@@ -227,6 +265,7 @@ python examples/beat_example.py -s inactive
 
 - Expressive note DSL: `C4(120) * 2`, `Ef4 * 0.5`, `Z * 4`
 - All MIDI pitches across octaves 0–8 with sharp and flat aliases
+- General MIDI drum/percussion note constants in `propeller.notes.drums` (e.g. `SnareDrum1`, `ClosedHihat`)
 - Multi-lane tracks for chords and polyphony: `notes=[[C4()], [E4()], [G4()]]`
 - Pitch bend support via `PB(value)` for expressive pitch modulation
 - Validation at construction time with descriptive error messages
