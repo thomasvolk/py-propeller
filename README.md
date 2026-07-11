@@ -108,6 +108,8 @@ track(
 )
 ```
 
+See `examples/drum_example.py` for a full example.
+
 General MIDI Level 2 percussion additions (e.g. Shaker, Sticks) are not included.
 
 ### Duration and velocity

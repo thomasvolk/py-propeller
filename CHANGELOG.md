@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0] — 2026-07-11
+
+### Added
+
+- New `propeller.notes.drums` module with named `Note` constants for every General MIDI Level 1 percussion sound (MIDI note numbers 35–81, e.g. `SnareDrum1`, `ClosedHihat`, `Cowbell`), usable directly in `Track` note lists alongside pitch constants. General MIDI Level 2 percussion additions are not included.
+
+### Internal
+
+- Added specification and dedicated test suite for the drum note constants module.
+- `propeller/notes.py` restructured into a package (`propeller/notes/__init__.py`) to host the new `drums` submodule; the existing `propeller.notes` API is unchanged.
+
+---
+
 ## [0.5.0] — 2026-07-08
 
 ### Changed
