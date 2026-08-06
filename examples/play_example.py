@@ -10,7 +10,7 @@ p = project(
               channel=2,
               instrument=0,
               notes=[
-              [
+                [
                   C4,
                   C5,
                   E4,
