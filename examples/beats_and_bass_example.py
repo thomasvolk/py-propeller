@@ -1,4 +1,4 @@
-from propeller.notes import *
+from propeller.notes import C4, D4, E4, F2, D3, C3, Z
 from propeller import project, track
 
 BD = C4

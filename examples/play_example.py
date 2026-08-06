@@ -8,7 +8,7 @@ p = project(
     tracks=[
         track(name="Piano",
               channel=2,
-              instrument=0, 
+              instrument=0,
               notes=[
                   C4(120),
                   D4(100),

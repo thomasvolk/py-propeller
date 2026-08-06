@@ -1,4 +1,4 @@
-from propeller.notes import *
+from propeller.notes import C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, Gs4, Ef5, Z
 from propeller import project, track
 
 # Beethoven - Für Elise (WoO 59), main theme

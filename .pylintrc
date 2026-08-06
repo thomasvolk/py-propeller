@@ -20,6 +20,8 @@ disable =
     missing-module-docstring,
     too-few-public-methods,
     wildcard-import,
+    unused-wildcard-import,
+    no-name-in-module,
 
 [BASIC]
 
