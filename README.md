@@ -251,17 +251,19 @@ The `-s` flag has no effect when `-n` is also present — dry-run mode takes pre
 
 ### Live setup
 
-Combine `-s active` with the Unix `watch` command to get an instant feedback loop while composing. `watch` re-runs your script at a fixed interval, so every save is picked up automatically:
+Use the `py-propeller` command to get an instant feedback loop while composing. It re-reads and re-evaluates your script on a fixed interval — equivalent to running it with `-s active` on every tick — so every save is picked up automatically:
 
 ```
-watch -n 0.1 python examples/beat_example.py -s active
+py-propeller examples/beat_example.py
 ```
 
-While `watch` is running, open `beat_example.py` in your editor and save changes — the engine will load the updated project within 100 ms. Stop playback at any time with:
+While it's running, open `beat_example.py` in your editor and save changes — the engine will load the updated project within 100 ms, the default interval. Override it in milliseconds with `-n`:
 
 ```
-python examples/beat_example.py -s inactive
+py-propeller examples/beat_example.py -n 250
 ```
+
+`py-propeller` blocks until interrupted. A mid-save syntax or runtime error is printed to stderr without stopping the watcher — fix the file and the next tick picks it up. Press Ctrl+C to send `loop-stop` and exit.
 
 ## Features
 
@@ -276,6 +278,7 @@ python examples/beat_example.py -s inactive
 - Graceful Ctrl+C shutdown
 - Dry-run mode (`-n`) to print JSON payloads without connecting
 - Non-blocking mode (`-s active` / `-s inactive`) for scripted start/stop
+- `py-propeller` command for a live-reload feedback loop while composing
 - Sync mode (`-s sync`) to hand transport control to an external clock source
 
 ## Contributing

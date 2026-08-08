@@ -36,6 +36,10 @@ class TestPyprojectMetadata:
         data = self._load_toml()
         assert "hatchling" in data["build-system"]["requires"]
 
+    def test_py_propeller_console_script_entry_point(self):
+        data = self._load_toml()
+        assert data["project"]["scripts"]["py-propeller"] == "propeller.watch:main"
+
 
 # ---------------------------------------------------------------------------
 # T-2: public API imports from propeller
@@ -237,6 +241,19 @@ class TestVenvInstallation:
         result = subprocess.run(
             [str(python), "-c",
              "from propeller.notes import *; assert 'C4' in dir()"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
+
+    def test_py_propeller_command_installed(self, installed_venv):
+        py_propeller = installed_venv / "bin" / "py-propeller"
+        assert py_propeller.is_file()
+
+    def test_py_propeller_command_runs(self, installed_venv):
+        py_propeller = installed_venv / "bin" / "py-propeller"
+        result = subprocess.run(
+            [str(py_propeller), "--help"],
             capture_output=True,
             text=True,
         )
