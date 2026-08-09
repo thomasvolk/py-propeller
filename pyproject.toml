@@ -10,6 +10,9 @@ license = "Apache-2.0"
 authors = [{name = "Thomas Volk", email = "info@thomasvolk.de"}]
 dependencies = []
 
+[project.scripts]
+py-propeller = "propeller.watch:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["propeller"]
 
