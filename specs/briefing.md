@@ -1,22 +1,28 @@
 
-I want to extend the language with a probability function. 
+I want to extend the language with a slide function. 
 This function will be placed in its own module:
 ```python
-from propeller.func import probability
+from propeller.func import slide
 ```
 
-With `probability`, you can decorate a note with a probability value.
-
-In this example the `SnareDrum1` note will be played with a probability of 0.5, and if it is not played, it will be replaced with a `Z` (rest) note.
-The length of the note will be halved, so it will only play for half the duration of a normal `SnareDrum1` or the `Z` note.
-If the last parameter is not specified, the default replacement will be a `Z` note.
+With `slide`, you can create a series of Pitch Bend events combined with a series of notes so that it will sound like a slide.
+This will slide from C4 to C5 in 0.1 steps, the slide is 4 quarter notes long (time signature is 4/4):
 ```python
               notes=
               [
-                  BassDrum1(110),
-                  SnareDrum1(100),
-                  BassDrum1(110),
-                  SnareDrum1(100) * 0.5,
-                  probability(0.5, SnareDrum1, replacement=Z) * 0.5,
+                  slide(C4, C5, steps=0.1) * 4,
+              ]
+```
+
+A Pitch Bend is affecting all notes of a track.
+I Pitch Bend events calculated from multiple slides with the same point in time, will be consolidated. 
+```python
+              notes=[
+                [
+                  slide(C4, C5, steps=0.1) * 4,
+                ],
+                [
+                  slide(E4, E5, steps=0.1) * 4, # This will only place the notes but, the PB events will be consoludated with the one above
+                ],
               ]
 ```
