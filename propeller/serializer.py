@@ -208,10 +208,21 @@ def _serialize_track(track, denominator: int = 4) -> dict:
 def serialize(project) -> dict:
     numerator, denominator = project.time_signature
     loop_duration = round(project.bars * numerator * PPQN * 4 / denominator)
+    tracks = [_serialize_track(t, denominator) for t in project.tracks]
+    for track in tracks:
+        pitch_bends = track.get('pitch-bends')
+        if pitch_bends:
+            # A slide spanning the full remaining bar produces its last
+            # pitch-bend event exactly at loop_duration; the engine requires
+            # tick < loop_duration, so pull that one event back by a tick.
+            for pb in pitch_bends:
+                if pb[0] == loop_duration:
+                    pb[0] = loop_duration - 1
+            pitch_bends.sort(key=lambda pb: pb[0])
     return {
         'header': {
             'bpm': project.bpm,
             'loop_duration': loop_duration,
         },
-        'tracks': [_serialize_track(t, denominator) for t in project.tracks],
+        'tracks': tracks,
     }
