@@ -87,7 +87,7 @@ class _SlideInterval:
 class Slide:
     start: 'Note'
     end: 'Note'
-    steps: float
+    steps: float = 0.01
     duration: float = 1.0
 
     def __post_init__(self) -> None:

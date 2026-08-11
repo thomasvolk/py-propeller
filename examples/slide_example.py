@@ -11,12 +11,12 @@ p = project(
               instrument=0,
               notes=[
                   [
-                      Slide(C4, D4, steps=0.01) * 4,
+                      Slide(C4, C5) * 4,
                   ],
                   [
                       # Two concurrent slides on the same track: their pitch-bend
                       # events are consolidated instead of conflicting.
-                      #Slide(E4, E5, steps=0.1) * 4,
+                      Slide(E4, E5, steps=0.01) * 4,
                   ],
               ]
         ),
