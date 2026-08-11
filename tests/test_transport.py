@@ -38,6 +38,26 @@ class TestErrorClasses:
         err = PropellerResponseError(code="validation_error")
         assert err.code == "validation_error"
 
+    def test_response_error_message_attribute(self):
+        from propeller.errors import PropellerResponseError
+        err = PropellerResponseError(code="validation_error", message="track 0 note 0: duration must be > 0")
+        assert err.message == "track 0 note 0: duration must be > 0"
+
+    def test_response_error_message_defaults_to_none(self):
+        from propeller.errors import PropellerResponseError
+        err = PropellerResponseError(code="validation_error")
+        assert err.message is None
+
+    def test_response_error_str_includes_message_when_present(self):
+        from propeller.errors import PropellerResponseError
+        err = PropellerResponseError(code="validation_error", message="duration must be > 0")
+        assert str(err) == "validation_error: duration must be > 0"
+
+    def test_response_error_str_is_code_only_without_message(self):
+        from propeller.errors import PropellerResponseError
+        err = PropellerResponseError(code="no_project")
+        assert str(err) == "no_project"
+
 
 # ---------------------------------------------------------------------------
 # T-2: DEFAULT_SOCKET_PATH defaults to /tmp/propeller.sock
@@ -239,6 +259,36 @@ class TestSendErrorResponse:
                 transport.PropellerClient().send('{"command": "test"}')
 
         assert exc_info.value.code == 'no_project'
+
+    def test_raises_response_error_with_message(self, monkeypatch):
+        import propeller.transport as transport
+        from propeller.errors import PropellerResponseError
+        mock_sock, _ = _make_socket_mock(
+            [b'{"status": "error", "code": "validation_error", '
+             b'"message": "track 0 pitch-bend 5: tick 1920 is out of range '
+             b'(must be < loop_duration 1920)"}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            with pytest.raises(PropellerResponseError) as exc_info:
+                transport.PropellerClient().send('{"command": "test"}')
+
+        assert exc_info.value.message == (
+            'track 0 pitch-bend 5: tick 1920 is out of range (must be < loop_duration 1920)'
+        )
+
+    def test_raises_response_error_without_message_field(self, monkeypatch):
+        import propeller.transport as transport
+        from propeller.errors import PropellerResponseError
+        mock_sock, _ = _make_socket_mock(
+            [b'{"status": "error", "code": "no_project"}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            with pytest.raises(PropellerResponseError) as exc_info:
+                transport.PropellerClient().send('{"command": "test"}')
+
+        assert exc_info.value.message is None
 
 
 # ---------------------------------------------------------------------------
@@ -442,6 +492,20 @@ class TestQueryErrorResponse:
                 transport.PropellerClient().query('{"command": "status"}')
 
         assert exc_info.value.code == 'no_project'
+
+    def test_query_raises_response_error_with_message(self, monkeypatch):
+        import propeller.transport as transport
+        from propeller.errors import PropellerResponseError
+        mock_sock, _ = _make_socket_mock(
+            [b'{"status": "error", "code": "validation_error", '
+             b'"message": "loop_duration must be greater than 0"}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            with pytest.raises(PropellerResponseError) as exc_info:
+                transport.PropellerClient().query('{"command": "status"}')
+
+        assert exc_info.value.message == 'loop_duration must be greater than 0'
 
     def test_query_raises_connection_error_on_failure(self, monkeypatch):
         import propeller.transport as transport

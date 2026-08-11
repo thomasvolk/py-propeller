@@ -11,6 +11,7 @@ class PropellerConnectionError(PropellerError):
 
 
 class PropellerResponseError(PropellerError):
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, message: str | None = None) -> None:
         self.code = code
-        super().__init__(code)
+        self.message = message
+        super().__init__(f'{code}: {message}' if message else code)

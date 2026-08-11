@@ -35,7 +35,7 @@ class PropellerClient:
                 chunks.append(chunk)
             response = json.loads(b''.join(chunks))
         if response['status'] == 'error':
-            raise PropellerResponseError(code=response['code'])
+            raise PropellerResponseError(code=response['code'], message=response.get('message'))
         return None
 
     def query(self, payload: str) -> dict:
@@ -56,7 +56,7 @@ class PropellerClient:
                 chunks.append(chunk)
             response = json.loads(b''.join(chunks))
         if response['status'] == 'error':
-            raise PropellerResponseError(code=response['code'])
+            raise PropellerResponseError(code=response['code'], message=response.get('message'))
         return response
 
     def __enter__(self) -> 'PropellerClient':
