@@ -209,6 +209,43 @@ track(
 
 A pitch bend fires at its own position in the sequence and does not itself consume any duration — placing a rest between a `PB(...)` and the next note delays the note, not the bend. Consecutive `PB(...)` calls with no note or rest between them are not permitted. See `examples/pitch_bend_example.py` for a full example.
 
+### Pitch slide
+
+`Slide(start, end, steps=0.01)` glides continuously from one pitch to another over its duration. Internally it's expanded into a series of retriggered notes (one per whole tone crossed) with pitch-bend events ramping smoothly between them:
+
+```python
+from propeller.notes import C4, C5, Slide
+
+track(
+    name="Lead",
+    channel=1,
+    instrument=0,
+    notes=[
+        Slide(C4, C5) * 4,   # glide from C4 up to C5 over 4 beats
+    ],
+)
+```
+
+- `start`, `end` — `Note` instances with different pitches; the slide's direction follows their pitch difference.
+- `steps` — maximum pitch-bend increment in semitones per event, in `(0.0, 1.0]`; defaults to `0.01` for a smooth, near-continuous glide. Larger values produce fewer, more audible steps.
+- Multiply by a beat count, like any other note, to set the slide's total duration: `Slide(C4, C5) * 4`.
+
+Two concurrent slides in different lanes of the same track (a multi-lane `notes=[[...], [...]]` track) have their pitch-bend events consolidated automatically instead of conflicting, as long as they agree at every shared tick. See `examples/slide_example.py` for a full example.
+
+### Conditional notes
+
+`probability(p, note, replacement=Z)` resolves to `note` with probability `p` (`0.0`–`1.0`) and to `replacement` otherwise (a rest, `Z`, by default):
+
+```python
+from propeller.notes.drums import SnareDrum1, HandClap
+from propeller.func import probability
+
+probability(0.5, SnareDrum1, replacement=HandClap)   # 50/50 snare or hand clap
+probability(0.5, SnareDrum1)                          # 50/50 snare or rest
+```
+
+The outcome is rolled once, when the script is evaluated — running it once via plain `python` freezes the choice for the whole playback. Run it with `py-propeller` (see Live setup below) to re-roll on every reload. See `examples/probability_example.py` for a full example.
+
 ### Transport configuration
 
 py-propeller connects to the engine via Unix domain socket at `/tmp/propeller.sock` by default. Override with an environment variable:
@@ -272,6 +309,8 @@ py-propeller examples/beat_example.py -n 250
 - General MIDI drum/percussion note constants in `propeller.notes.drums` (e.g. `SnareDrum1`, `ClosedHihat`)
 - Multi-lane tracks for chords and polyphony: `notes=[[C4()], [E4()], [G4()]]`
 - Pitch bend support via `PB(value)` for expressive pitch modulation
+- Pitch slide (glissando) via `Slide(start, end, steps=...)`, with automatic consolidation of concurrent slides across lanes
+- Conditional/probabilistic notes via `probability(p, note, replacement=...)`
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
