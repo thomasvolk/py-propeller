@@ -71,6 +71,66 @@ class Rest:
         return dataclasses.replace(self, duration=beats)
 
 
+@dataclasses.dataclass(frozen=True)
+class _SlideInterval:
+    """A single whole-tone (or partial, trailing) step within a Slide.
+
+    Internal, musical-units-only representation (no ticks/PPQN knowledge).
+    Not part of the public API.
+    """
+    start_pitch: int
+    end_pitch: int
+    tone_width: float
+
+
+@dataclasses.dataclass(frozen=True)
+class Slide:
+    start: 'Note'
+    end: 'Note'
+    steps: float
+    duration: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.start, Note) or not isinstance(self.end, Note):
+            raise PropellerValidationError(
+                'start and end must be Note instances'
+            )
+        if (
+            not isinstance(self.steps, (int, float))
+            or isinstance(self.steps, bool)
+            or not (0 < self.steps <= 1.0)
+        ):
+            raise PropellerValidationError(
+                f'steps must be a positive number no greater than 1.0, got {self.steps!r}'
+            )
+        if self.start.pitch == self.end.pitch:
+            raise PropellerValidationError(
+                'start and end must have different pitches'
+            )
+
+    def __mul__(self, beats: float) -> 'Slide':
+        if not isinstance(beats, (int, float)) or isinstance(beats, bool) or beats <= 0:
+            raise PropellerValidationError(
+                f"duration must be a positive number, got {beats!r}"
+            )
+        return dataclasses.replace(self, duration=beats)
+
+    def intervals(self) -> list['_SlideInterval']:
+        start_pitch = self.start.pitch
+        end_pitch = self.end.pitch
+        direction = 1 if end_pitch > start_pitch else -1
+        remaining = abs(end_pitch - start_pitch)
+        result: list['_SlideInterval'] = []
+        current = start_pitch
+        while remaining > 0:
+            step = min(2, remaining)
+            next_pitch = current + direction * step
+            result.append(_SlideInterval(current, next_pitch, step / 2.0))
+            current = next_pitch
+            remaining -= step
+        return result
+
+
 for _octave in range(9):
     for _semitone, _names in enumerate(_SEMITONES):
         _pitch = (_octave + 1) * 12 + _semitone

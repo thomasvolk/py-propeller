@@ -1,7 +1,7 @@
 import dataclasses
 
 from propeller.errors import PropellerValidationError
-from propeller.notes import Note, PitchBend, Rest
+from propeller.notes import Note, PitchBend, Rest, Slide
 
 
 @dataclasses.dataclass(frozen=True)
@@ -31,9 +31,9 @@ class Track:
     def _validate_lane(self, lane, lane_i=None) -> None:
         prev_was_pb = False
         for pos_i, note in enumerate(lane, start=1):
-            if not isinstance(note, (Note, Rest, PitchBend)):
+            if not isinstance(note, (Note, Rest, PitchBend, Slide)):
                 loc = f'lane {lane_i}, position {pos_i}' if lane_i else f'notes[{pos_i}]'
-                suffix = 'not a Note, Rest, or PitchBend instance' if lane_i else 'is not a Note or Rest instance'
+                suffix = 'not a Note, Rest, PitchBend, or Slide instance' if lane_i else 'is not a Note or Rest instance'
                 raise PropellerValidationError(f'{loc}: {suffix}')
             if isinstance(note, PitchBend):
                 if prev_was_pb:
