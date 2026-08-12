@@ -59,13 +59,21 @@ def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, l
     """Expand a Slide into its retriggered Note rows and PitchBend rows,
     atomically, as if it were a single larger Note (D-1 option A).
 
+    The pitch bend is reset to zero at the slide's first note-on (so it
+    always starts its ramp from center, regardless of what preceded it) and
+    again at the slide's end tick (so a bend never leaks into whatever plays
+    next). The final ramp step always lands exactly on the end tick too
+    (it's simultaneous with the last retriggered note's note-off), so the
+    zero reset replaces it there rather than adding a conflicting duplicate.
+
     Returns (note_rows, pitch_bend_rows, total_duration_ticks) so the caller
     can extend its accumulators and advance the shared tick cursor once.
     """
     total_duration_ticks = _beats_to_ticks(slide.duration, denominator)
+    end_tick = start_tick + total_duration_ticks
     notes_out = _slide_note_rows(slide, start_tick, denominator)
     ascending = slide.end.pitch > slide.start.pitch
-    pitch_bends_out = []
+    pitch_bends_out = [[start_tick, _pb_to_int(0.0)]]
     for interval, note_row in zip(slide.intervals(), notes_out):
         interval_tick, interval_length = note_row[0], note_row[1]
         values = _slide_pitch_bend_values(interval.tone_width, slide.steps, ascending)
@@ -73,6 +81,7 @@ def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, l
         for j, value in enumerate(values, start=1):
             pb_tick = interval_tick + round(interval_length * j / count)
             pitch_bends_out.append([pb_tick, _pb_to_int(value)])
+    pitch_bends_out[-1] = [end_tick, _pb_to_int(0.0)]
     return notes_out, pitch_bends_out, total_duration_ticks
 
 

@@ -79,10 +79,13 @@ class TestConsolidationIdenticalValuesDedup:
         return serialize(project)
 
     def test_t3_ac1_matching_slides_dedup_to_single_pb_per_tick(self):
+        # 60 ramp events (last one replaced by the shared end-tick zero-reset)
+        # plus the shared start-tick zero-reset = 61, all deduped since both
+        # slides' curves are identical.
         from propeller.notes import Slide, C4, C5, E4, E5
         result = self._serialize(Slide(C4, C5, steps=0.1) * 4, Slide(E4, E5, steps=0.1) * 4)
         pbs = result['tracks'][0]['pitch-bends']
-        assert len(pbs) == 60
+        assert len(pbs) == 61
 
     def test_t3_ac1_no_duplicate_ticks_in_output(self):
         from propeller.notes import Slide, C4, C5, E4, E5
@@ -241,6 +244,10 @@ class TestConsolidationMismatchedValuesRaise:
 
 class TestConsolidationNonMatchingTicksPreserved:
     def test_t11_ac5_non_matching_ticks_all_preserved_sorted(self):
+        # Lane 1's Slide (start-tick 0) produces zero-resets at 0 and 480,
+        # plus a mid-ramp event at 240. Lane 2's Slide is pushed out to
+        # start-tick 720 (past lane 1's last tick) by a leading rest, so its
+        # own zero-resets (720, 1200) land on ticks lane 1 never touches.
         from propeller.composition import Project, Track
         from propeller.notes import Slide, C4, D4, E4, Fs4, Z
         from propeller.serializer import serialize
@@ -248,15 +255,15 @@ class TestConsolidationNonMatchingTicksPreserved:
         track = Track(
             name='Lead', channel=1, instrument=0,
             notes=[
-                [Slide(C4, D4, steps=0.5)],            # pbs at ticks 240, 480
-                [Z * 0.5, Slide(E4, Fs4, steps=1.0)],   # pb at tick 720
+                [Slide(C4, D4, steps=0.5)],              # pbs at ticks 0, 240, 480
+                [Z * 1.5, Slide(E4, Fs4, steps=1.0)],     # pbs at ticks 720, 1200
             ],
         )
         project = Project(bpm=120, time_signature=(4, 4), bars=2, tracks=[track])
         result = serialize(project)
         pbs = result['tracks'][0]['pitch-bends']
         ticks = [pb[0] for pb in pbs]
-        assert ticks == [240, 480, 720]
+        assert ticks == [0, 240, 480, 720, 1200]
 
     def test_t11_ac5_ticks_are_sorted_ascending(self):
         from propeller.composition import Project, Track
@@ -266,15 +273,15 @@ class TestConsolidationNonMatchingTicksPreserved:
         track = Track(
             name='Lead', channel=1, instrument=0,
             notes=[
-                [Z * 0.5, Slide(E4, Fs4, steps=1.0)],   # pb at tick 720 (lane listed first)
-                [Slide(C4, D4, steps=0.5)],              # pbs at ticks 240, 480
+                [Z * 1.5, Slide(E4, Fs4, steps=1.0)],     # pbs at ticks 720, 1200 (lane listed first)
+                [Slide(C4, D4, steps=0.5)],                # pbs at ticks 0, 240, 480
             ],
         )
         project = Project(bpm=120, time_signature=(4, 4), bars=2, tracks=[track])
         result = serialize(project)
         ticks = [pb[0] for pb in result['tracks'][0]['pitch-bends']]
         assert ticks == sorted(ticks)
-        assert ticks == [240, 480, 720]
+        assert ticks == [0, 240, 480, 720, 1200]
 
 
 # ---------------------------------------------------------------------------

@@ -426,36 +426,49 @@ class TestSlideSerialization:
         assert all(n[3] == 100 for n in notes_out)
 
     def test_t17_ac2_sixty_pitch_bend_events(self):
-        # 6 intervals x 10 evenly-spaced pitch-bends each = 60
+        # 6 intervals x 10 evenly-spaced pitch-bends each = 60, plus a leading
+        # zero-reset at the slide's start tick (the trailing zero-reset
+        # replaces rather than adds to the final ramp step, see below).
         result = self._serialize_worked_example()
         pbs = result['tracks'][0]['pitch-bends']
-        assert len(pbs) == 60
+        assert len(pbs) == 61
+
+    def test_t17_ac2_leading_pitch_bend_is_zero_reset(self):
+        from propeller.serializer import _pb_to_int
+        result = self._serialize_worked_example()
+        pbs = result['tracks'][0]['pitch-bends']
+        assert pbs[0] == [0, _pb_to_int(0.0)]
 
     def test_t17_ac2_first_interval_pitch_bend_ticks(self):
         result = self._serialize_worked_example()
         pbs = result['tracks'][0]['pitch-bends']
-        first_interval_ticks = [pb[0] for pb in pbs[:10]]
+        # index 0 is the leading zero-reset; the first interval's ramp follows it
+        first_interval_ticks = [pb[0] for pb in pbs[1:11]]
         assert first_interval_ticks == [32, 64, 96, 128, 160, 192, 224, 256, 288, 320]
 
     def test_t17_ac2_last_pb_of_interval_coincides_with_next_note_tick(self):
         result = self._serialize_worked_example()
         notes_out = result['tracks'][0]['notes']
         pbs = result['tracks'][0]['pitch-bends']
-        # last PB of interval 1 (index 9) should land on the same tick as note 2's start
-        assert pbs[9][0] == notes_out[1][0]
+        # last PB of interval 1 (index 10, after the leading zero-reset)
+        # should land on the same tick as note 2's start
+        assert pbs[10][0] == notes_out[1][0]
 
     def test_t17_ac2_first_interval_pitch_bend_values(self):
         from propeller.serializer import _pb_to_int
         result = self._serialize_worked_example()
         pbs = result['tracks'][0]['pitch-bends']
         expected = [_pb_to_int(0.1 * i) for i in range(1, 11)]
-        assert [pb[1] for pb in pbs[:10]] == expected
+        assert [pb[1] for pb in pbs[1:11]] == expected
 
-    def test_t17_ac2_last_pb_value_of_final_interval_is_full_tone_up(self):
+    def test_t17_ac2_last_pb_is_zero_reset_not_full_tone_up(self):
+        # The slide's end-tick reset to zero replaces what would otherwise
+        # be the final ramp step (they land on the same tick, simultaneous
+        # with the last retriggered note's note-off).
         from propeller.serializer import _pb_to_int
         result = self._serialize_worked_example()
         pbs = result['tracks'][0]['pitch-bends']
-        assert pbs[-1][1] == _pb_to_int(1.0)
+        assert pbs[-1] == [1920, _pb_to_int(0.0)]
 
     def test_t17_ac3_total_span_matches_duration(self):
         # 4 beats * 4 bars loop; slide spans exactly 1920 ticks (4 beats)
@@ -480,7 +493,8 @@ class TestSlideSerialization:
         assert notes_out[-1] == [2400, 480, 62, 100]
 
     def test_t17_ac5_partial_final_interval_pitch_bend_count(self):
-        # C4 -> Ds4: full tone interval (10 PBs) + half tone interval (5 PBs) = 15
+        # C4 -> Ds4: full tone interval (10 PBs) + half tone interval (5 PBs) = 15,
+        # plus the leading zero-reset at the slide's start tick = 16.
         from propeller.composition import Project, Track
         from propeller.notes import Slide, C4, Ds4
         from propeller.serializer import serialize
@@ -489,7 +503,7 @@ class TestSlideSerialization:
         project = Project(bpm=120, time_signature=(4, 4), bars=1, tracks=[track])
         result = serialize(project)
         pbs = result['tracks'][0]['pitch-bends']
-        assert len(pbs) == 15
+        assert len(pbs) == 16
 
     def test_t17_ac6_retriggered_notes_use_start_velocity_not_end(self):
         from propeller.composition import Project, Track
