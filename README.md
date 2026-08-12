@@ -230,6 +230,8 @@ track(
 - `steps` — maximum pitch-bend increment in semitones per event, in `(0.0, 1.0]`; defaults to `0.01` for a smooth, near-continuous glide. Larger values produce fewer, more audible steps.
 - Multiply by a beat count, like any other note, to set the slide's total duration: `Slide(C4, C5) * 4`.
 
+The pitch bend is reset to zero at the start of the slide and again at its end, so a glide never leaves the channel's pitch wheel offset for whatever note plays next.
+
 Two concurrent slides in different lanes of the same track (a multi-lane `notes=[[...], [...]]` track) have their pitch-bend events consolidated automatically instead of conflicting, as long as they agree at every shared tick. See `examples/slide_example.py` for a full example.
 
 ### Conditional notes
