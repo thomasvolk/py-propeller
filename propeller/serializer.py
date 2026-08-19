@@ -12,77 +12,58 @@ def _pb_to_int(value: float) -> int:
     return int(round((value + 1.0) / 2.0 * 16383))
 
 
-def _slide_interval_tick_lengths(tone_widths: list[float], total_duration_ticks: int) -> list[int]:
-    """Split total_duration_ticks across intervals proportional to their tone_width.
-
-    Uses cumulative-boundary rounding so the lengths always sum exactly to
-    total_duration_ticks (no drift from independently rounding each share).
-    """
-    total_width = sum(tone_widths)
-    lengths = []
-    prev_boundary = 0
-    cumulative = 0.0
-    for width in tone_widths:
-        cumulative += width
-        boundary = round(total_duration_ticks * cumulative / total_width)
-        lengths.append(boundary - prev_boundary)
-        prev_boundary = boundary
-    return lengths
-
-
-def _slide_pitch_bend_values(tone_width: float, steps: float, ascending: bool = True) -> list[float]:
-    """Evenly-spaced PitchBend values from 0 up to tone_width (F-6, F-7), in
+def _slide_pitch_bend_values(value: float, steps: float) -> list[float]:
+    """Evenly-spaced PitchBend values from (near) 0 up to value, in
     increments no larger than steps when it divides evenly. The event count
-    is rounded to the nearest whole number when it doesn't (F-10), so the
+    is rounded to the nearest whole number when it doesn't (F-5), so the
     actual increment can exceed steps in that case rather than raising."""
-    count = max(1, round(tone_width / steps))
-    sign = 1.0 if ascending else -1.0
-    return [sign * tone_width * j / count for j in range(1, count + 1)]
-
-
-def _slide_note_rows(slide, start_tick: int, denominator: int = 4) -> list:
-    """One retriggered Note row per Slide interval, at that interval's start
-    pitch, using the Slide's start-note velocity (F-5, F-9)."""
-    intervals = slide.intervals()
-    total_duration_ticks = _beats_to_ticks(slide.duration, denominator)
-    tone_widths = [i.tone_width for i in intervals]
-    interval_lengths = _slide_interval_tick_lengths(tone_widths, total_duration_ticks)
-    rows = []
-    tick = start_tick
-    for interval, length in zip(intervals, interval_lengths):
-        rows.append([tick, length, interval.start_pitch, slide.start.velocity])
-        tick += length
-    return rows
+    count = max(1, round(abs(value) / steps))
+    return [value * j / count for j in range(1, count + 1)]
 
 
 def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, list, int]:
-    """Expand a Slide into its retriggered Note rows and PitchBend rows,
-    atomically, as if it were a single larger Note (D-1 option A).
+    """Expand a Slide into its single Note row and a ramp of PitchBend rows,
+    atomically.
 
-    The pitch bend is reset to zero at the slide's first note-on (so it
-    always starts its ramp from center, regardless of what preceded it) and
-    again at the slide's end tick (so a bend never leaks into whatever plays
+    The pitch bend is reset to zero at the slide's note-on (so it always
+    starts its ramp from center, regardless of what preceded it) and again
+    at the slide's end tick (so a bend never leaks into whatever plays
     next). The final ramp step always lands exactly on the end tick too
-    (it's simultaneous with the last retriggered note's note-off), so the
-    zero reset replaces it there rather than adding a conflicting duplicate.
+    (it's simultaneous with the note's note-off), so the zero reset
+    replaces it there rather than adding a conflicting duplicate.
 
     Returns (note_rows, pitch_bend_rows, total_duration_ticks) so the caller
     can extend its accumulators and advance the shared tick cursor once.
     """
     total_duration_ticks = _beats_to_ticks(slide.duration, denominator)
     end_tick = start_tick + total_duration_ticks
-    notes_out = _slide_note_rows(slide, start_tick, denominator)
-    ascending = slide.end.pitch > slide.start.pitch
+    notes_out = [[start_tick, total_duration_ticks, slide.start.pitch, slide.start.velocity]]
+    values = _slide_pitch_bend_values(slide.target.value, slide.target.steps)
+    count = len(values)
     pitch_bends_out = [[start_tick, _pb_to_int(0.0)]]
-    for interval, note_row in zip(slide.intervals(), notes_out):
-        interval_tick, interval_length = note_row[0], note_row[1]
-        values = _slide_pitch_bend_values(interval.tone_width, slide.steps, ascending)
-        count = len(values)
-        for j, value in enumerate(values, start=1):
-            pb_tick = interval_tick + round(interval_length * j / count)
-            pitch_bends_out.append([pb_tick, _pb_to_int(value)])
+    for j, value in enumerate(values, start=1):
+        pb_tick = start_tick + round(total_duration_ticks * j / count)
+        pitch_bends_out.append([pb_tick, _pb_to_int(value)])
     pitch_bends_out[-1] = [end_tick, _pb_to_int(0.0)]
     return notes_out, pitch_bends_out, total_duration_ticks
+
+
+def _dedup_same_tick(rows: list) -> list:
+    """Keep only the first pitch-bend row seen at each tick, within one
+    lane's own output, dropping any later row at a tick already seen.
+
+    rows may be [tick, value] pairs or (tick, value, source) triples; only
+    index 0 (the tick) is inspected. Order is preserved, so "first" means
+    the order the rows were appended in (the lane's authored item order)."""
+    seen_ticks: set[int] = set()
+    result = []
+    for row in rows:
+        tick = row[0]
+        if tick in seen_ticks:
+            continue
+        seen_ticks.add(tick)
+        result.append(row)
+    return result
 
 
 def _serialize_lane(
@@ -149,7 +130,7 @@ def _serialize_lane(
             tick_cursor += duration_ticks
     if emit_trailing_pb and pending_pb_value is not None:
         _emit_manual_pb(pending_pb_tick, pending_pb_value)
-    return notes_out, pitch_bends_out
+    return notes_out, _dedup_same_tick(pitch_bends_out)
 
 
 def _consolidate_pitch_bends(rows: list) -> list:
