@@ -211,26 +211,35 @@ A pitch bend fires at its own position in the sequence and does not itself consu
 
 ### Pitch slide
 
-`Slide(start, end, steps=0.01)` glides continuously from one pitch to another over its duration. Internally it's expanded into a series of retriggered notes (one per whole tone crossed) with pitch-bend events ramping smoothly between them:
+`Slide(note, to(value, steps=0.01))` plays `note` once and glides its pitch bend continuously from
+center (`0.0`) to `value` over the slide's duration:
 
 ```python
-from propeller.notes import C4, C5, Slide
+from propeller.notes import C4, Slide
+from propeller.notes.Slide import to  # factory function for a slide's target bend value
 
 track(
     name="Lead",
     channel=1,
     instrument=0,
     notes=[
-        Slide(C4, C5) * 4,   # glide from C4 up to C5 over 4 beats
+        Slide(C4, to(1.0, steps=0.01)) * 4,   # play C4 and bend up to the max over 4 beats
+        Slide(C4, to(-0.5)) * 4,               # play C4 and bend down to half, default steps
     ],
 )
 ```
 
-- `start`, `end` — `Note` instances with different pitches; the slide's direction follows their pitch difference.
-- `steps` — maximum pitch-bend increment in semitones per event, in `(0.0, 1.0]`; defaults to `0.01` for a smooth, near-continuous glide. Larger values produce fewer, more audible steps.
-- Multiply by a beat count, like any other note, to set the slide's total duration: `Slide(C4, C5) * 4`.
+- `note` — the `Note` to play once for the slide's full duration.
+- `to(value, steps=0.01)` — the glide's target: `value` is the pitch-bend value to glide to, in
+  `[-1.0, 1.0]` and not `0.0` (a slide has to actually move the pitch); `steps` is the maximum
+  pitch-bend increment per event, in `(0.0, 1.0]`, defaulting to `0.01` for a smooth, near-continuous
+  glide. Larger `steps` values produce fewer, more audible steps.
+- Multiply by a beat count, like any other note, to set the slide's total duration: `Slide(C4, to(1.0)) * 4`.
 
-The pitch bend is reset to zero at the start of the slide and again at its end, so a glide never leaves the channel's pitch wheel offset for whatever note plays next.
+The pitch bend is reset to zero at the start of the slide and again at its end, so a glide never leaves
+the channel's pitch wheel offset for whatever note plays next. If a `Slide` or `PB` produces a
+pitch-bend event at the same tick offset as another one earlier in the same lane, only the earlier one
+takes effect — the later one is dropped.
 
 Two concurrent slides in different lanes of the same track (a multi-lane `notes=[[...], [...]]` track) have their pitch-bend events consolidated automatically instead of conflicting, as long as they agree at every shared tick. See `examples/slide_example.py` for a full example.
 
@@ -311,7 +320,7 @@ py-propeller examples/beat_example.py -n 250
 - General MIDI drum/percussion note constants in `propeller.notes.drums` (e.g. `SnareDrum1`, `ClosedHihat`)
 - Multi-lane tracks for chords and polyphony: `notes=[[C4()], [E4()], [G4()]]`
 - Pitch bend support via `PB(value)` for expressive pitch modulation
-- Pitch slide (glissando) via `Slide(start, end, steps=...)`, with automatic consolidation of concurrent slides across lanes
+- Pitch-bend glide via `Slide(note, to(value, steps=...))`, with automatic consolidation of concurrent slides across lanes
 - Conditional/probabilistic notes via `probability(p, note, replacement=...)`
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)

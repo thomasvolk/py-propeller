@@ -1,4 +1,5 @@
-from propeller.notes import C4, D4, C5, E4, E5, F4, Slide
+from propeller.notes import C4, E4, Slide
+from propeller.notes.Slide import to
 from propeller import project, track
 
 p = project(
@@ -11,12 +12,13 @@ p = project(
               instrument=0,
               notes=[
                   [
-                      Slide(C4, C5) * 4,
+                      Slide(C4, to(1.0, steps=0.01)) * 4,
                   ],
                   [
-                      # Two concurrent slides on the same track: their pitch-bend
-                      # events are consolidated instead of conflicting.
-                      Slide(E4, E5, steps=0.01) * 4,
+                      # Two concurrent slides on the same track sharing the
+                      # same target/steps: their pitch-bend events are
+                      # consolidated instead of conflicting.
+                      Slide(E4, to(1.0, steps=0.01)) * 4,
                   ],
               ]
         ),
