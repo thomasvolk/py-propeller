@@ -42,7 +42,7 @@ python my_project.py
 
 ## Installation
 
-Requires Python 3.11 or later and a running propeller-engine instance (>=0.7.0 — earlier engine versions used a mixed `"command"`/`"type"` IPC tagging scheme that this client's wire format does not send).
+Requires Python 3.11 or later and a running propeller-engine instance (>=0.8.0 — earlier engine versions used a mixed `"command"`/`"type"` IPC tagging scheme that this client's wire format does not send; the 0.8.0 `get-position` response change does not affect this client, which never calls `get-position`).
 
 1. Install the package:
 
