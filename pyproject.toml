@@ -8,6 +8,9 @@ version = "0.6.0"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Thomas Volk", email = "info@thomasvolk.de"}]
+# Not a pip dependency: py-propeller talks to propeller-engine over a Unix
+# socket, so the engine is a runtime requirement, not an installable package.
+# Requires propeller-engine >=0.7.0 (unified "command" IPC discriminant).
 dependencies = []
 
 [project.scripts]
