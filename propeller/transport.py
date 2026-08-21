@@ -34,7 +34,7 @@ class PropellerClient:
                     break
                 chunks.append(chunk)
             response = json.loads(b''.join(chunks))
-        if response['status'] == 'error':
+        if response.get('status') == 'error':
             raise PropellerResponseError(code=response['code'], message=response.get('message'))
         return None
 
@@ -55,7 +55,7 @@ class PropellerClient:
                     break
                 chunks.append(chunk)
             response = json.loads(b''.join(chunks))
-        if response['status'] == 'error':
+        if response.get('status') == 'error':
             raise PropellerResponseError(code=response['code'], message=response.get('message'))
         return response
 

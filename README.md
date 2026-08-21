@@ -42,7 +42,7 @@ python my_project.py
 
 ## Installation
 
-Requires Python 3.11 or later and a running propeller-engine instance (>=0.8.0 — earlier engine versions used a mixed `"command"`/`"type"` IPC tagging scheme that this client's wire format does not send; the 0.8.0 `get-position` response change does not affect this client, which never calls `get-position`).
+Requires Python 3.11 or later and a running propeller-engine instance (>=0.8.0 — earlier engine versions used a mixed `"command"`/`"type"` IPC tagging scheme that this client's wire format does not send; 0.8.0 is also the minimum version providing the `get-position` response format that `propeller.loop.get_position()` relies on).
 
 1. Install the package:
 
@@ -265,6 +265,25 @@ py-propeller connects to the engine via Unix domain socket at `/tmp/propeller.so
 PROPELLER_SOCK=/var/run/propeller.sock python my_project.py
 ```
 
+### Reading the loop position
+
+`propeller.loop.get_position()` queries the engine for the current playback position:
+
+```python
+from propeller import loop
+
+p = loop.get_position()
+print(f"tick: {p.tick}")
+print(f"loop_duration: {p.loop_duration}")
+print(f"loop_count: {p.loop_count}")
+```
+
+- `tick` — current position within the loop, in ticks
+- `loop_duration` — total loop length in ticks, or `None` if no project is loaded
+- `loop_count` — number of loops completed since playback started
+
+See `examples/position_example.py` for a full example.
+
 ### Playback lifecycle
 
 `project(...).play()` sends a `create-project` command followed by `loop-start` and then blocks. Pressing Ctrl+C sends `loop-stop` and exits cleanly.
@@ -325,6 +344,7 @@ py-propeller examples/beat_example.py -n 250
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
+- `propeller.loop.get_position()` to read the engine's current tick, loop duration, and loop count
 - Graceful Ctrl+C shutdown
 - Dry-run mode (`-n`) to print JSON payloads without connecting
 - Non-blocking mode (`-s active` / `-s inactive`) for scripted start/stop
