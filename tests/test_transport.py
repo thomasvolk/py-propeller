@@ -519,3 +519,32 @@ class TestQueryErrorResponse:
         with mock.patch('socket.socket', return_value=mock_sock):
             with pytest.raises(PropellerConnectionError):
                 transport.PropellerClient().query('{"command": "status"}')
+
+
+# ---------------------------------------------------------------------------
+# T-15: responses without a "status" field (e.g. get-position) are treated
+# as success, not a KeyError, by both send() and query()
+# ---------------------------------------------------------------------------
+
+class TestMissingStatusField:
+    def test_send_treats_missing_status_as_ok(self, monkeypatch):
+        import propeller.transport as transport
+        mock_sock, _ = _make_socket_mock(
+            [b'{"tick":960,"loop_duration":1920,"loop_count":3}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            result = transport.PropellerClient().send('{"command": "get-position"}')
+
+        assert result is None
+
+    def test_query_treats_missing_status_as_ok(self, monkeypatch):
+        import propeller.transport as transport
+        mock_sock, _ = _make_socket_mock(
+            [b'{"tick":960,"loop_duration":1920,"loop_count":3}', b'']
+        )
+
+        with mock.patch('socket.socket', return_value=mock_sock):
+            result = transport.PropellerClient().query('{"command": "get-position"}')
+
+        assert result == {'tick': 960, 'loop_duration': 1920, 'loop_count': 3}

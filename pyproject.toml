@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "py-propeller"
-version = "0.6.0"
+version = "0.7.0"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Thomas Volk", email = "info@thomasvolk.de"}]
 # Not a pip dependency: py-propeller talks to propeller-engine over a Unix
 # socket, so the engine is a runtime requirement, not an installable package.
 # Requires propeller-engine >=0.8.0 (unified "command" IPC discriminant;
-# the 0.8.0 get-position response change does not affect this client,
-# which never calls get-position).
+# also the minimum version providing the 0.8.0 get-position response format
+# that propeller.loop.get_position() relies on).
 dependencies = []
 
 [project.scripts]

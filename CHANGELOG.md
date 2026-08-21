@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0] — 2026-08-21
+
+### Added
+
+- New `propeller.loop` module with a `get_position()` function that queries the engine for the current playback position, returning a `Position` with `tick`, `loop_duration` (`None` when no project is loaded), and `loop_count`.
+
+### Fixed
+
+- `PropellerClient.send()` and `.query()` no longer raise `KeyError` on engine responses that omit the `"status"` field entirely (as `get-position` responses do) — a missing `"status"` is now treated the same as `"status": "ok"`.
+
+### Internal
+
+- Requires propeller-engine >=0.8.0, the first version to support `get-position`.
+
+---
+
 ## [0.6.0] — 2026-07-11
 
 ### Added
