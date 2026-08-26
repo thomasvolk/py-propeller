@@ -7,6 +7,8 @@ from . import Note, PitchBend, Rest
 
 __all__: list[str] = ['to', 'sin', 'cos', 'gauss']
 
+DEFAULT_STEPS: float = 0.01
+
 
 def _validate_steps(steps: float) -> None:
     if (
@@ -22,7 +24,7 @@ def _validate_steps(steps: float) -> None:
 @dataclasses.dataclass(frozen=True)
 class SlideTarget:
     value: float
-    steps: float = 0.01
+    steps: float = DEFAULT_STEPS
 
     def __post_init__(self) -> None:
         if (
@@ -43,7 +45,7 @@ class SlideTarget:
         return self.value * progress
 
 
-def to(value: float, steps: float = 0.01) -> SlideTarget:
+def to(value: float, steps: float = DEFAULT_STEPS) -> SlideTarget:
     return SlideTarget(value, steps)
 
 
@@ -53,7 +55,7 @@ class SlideCurve:
     at the slide's start to 1.0 at its end). Produced by sin()/cos()/gauss()
     or built directly for a custom shape."""
     func: Callable[[float], float]
-    steps: float = 0.01
+    steps: float = DEFAULT_STEPS
 
     def __post_init__(self) -> None:
         if not callable(self.func):
@@ -64,17 +66,30 @@ class SlideCurve:
         return self.func(progress)
 
 
-def sin(amp: float = 2.0, period: float = 1.0, y_offset: float = 0.0, steps: float = 0.01) -> SlideCurve:
-    return SlideCurve(lambda p: amp * math.sin(p * period * math.pi) + y_offset, steps)
+def _wave(
+    trig: Callable[[float], float], amp: float, period: float, y_offset: float, steps: float
+) -> SlideCurve:
+    return SlideCurve(lambda p: amp * trig(p * period * math.pi) + y_offset, steps)
 
 
-def cos(amp: float = 2.0, period: float = 1.0, y_offset: float = 0.0, steps: float = 0.01) -> SlideCurve:
-    return SlideCurve(lambda p: amp * math.cos(p * period * math.pi) + y_offset, steps)
+def sin(
+    amp: float = 2.0, period: float = 1.0, y_offset: float = 0.0, steps: float = DEFAULT_STEPS
+) -> SlideCurve:
+    """A sine-wave curve: amp * sin(progress * period * pi) + y_offset."""
+    return _wave(math.sin, amp, period, y_offset, steps)
 
 
-def gauss(u: float = 0.0, o: float = 1.0, steps: float = 0.01) -> SlideCurve:
-    """A normalized standard-normal PDF (peak scaled to 1.0), sampled across
-    the fixed window [u - 3*o, u + 3*o] as progress runs 0.0 -> 1.0."""
+def cos(
+    amp: float = 2.0, period: float = 1.0, y_offset: float = 0.0, steps: float = DEFAULT_STEPS
+) -> SlideCurve:
+    """A cosine-wave curve: amp * cos(progress * period * pi) + y_offset."""
+    return _wave(math.cos, amp, period, y_offset, steps)
+
+
+def gauss(u: float = 0.0, o: float = 1.0, steps: float = DEFAULT_STEPS) -> SlideCurve:
+    """A normalized standard-normal PDF (mean u, standard deviation o; peak
+    scaled to 1.0), sampled across the fixed window [u - 3*o, u + 3*o] as
+    progress runs 0.0 -> 1.0."""
     def _value(p: float) -> float:
         x = u - 3 * o + p * (6 * o)
         return math.exp(-0.5 * ((x - u) / o) ** 2)

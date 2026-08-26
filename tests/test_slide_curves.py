@@ -14,7 +14,10 @@ from propeller.errors import PropellerValidationError
 class TestSlideCurveConstruction:
     def test_func_is_stored(self):
         from propeller.notes.Slide import SlideCurve
-        func = lambda p: p
+
+        def func(p):
+            return p
+
         curve = SlideCurve(func)
         assert curve.func is func
 

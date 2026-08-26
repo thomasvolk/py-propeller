@@ -2,7 +2,7 @@ from typing import Callable
 
 from propeller.errors import PropellerValidationError
 from propeller.notes import PitchBend, Rest, Slide
-from propeller.notes.Slide import SlideCurve, SlideTarget
+from propeller.notes.Slide import DEFAULT_STEPS, SlideCurve, SlideTarget
 
 PPQN: int = 480
 
@@ -19,16 +19,13 @@ def _clip(value: float) -> float:
     return max(-1.0, min(1.0, value))
 
 
-def _target_value_at(target) -> Callable[[float], float]:
+def _resolve_target(target) -> tuple[Callable[[float], float], float]:
+    """A Slide's target is either a SlideTarget/SlideCurve (which carry
+    their own value_at()/steps) or a bare custom progress -> value
+    function, which gets the default steps."""
     if isinstance(target, (SlideTarget, SlideCurve)):
-        return target.value_at
-    return target
-
-
-def _target_steps(target) -> float:
-    if isinstance(target, (SlideTarget, SlideCurve)):
-        return target.steps
-    return 0.01
+        return target.value_at, target.steps
+    return target, DEFAULT_STEPS
 
 
 def _slide_pitch_bend_values(value_at, steps: float) -> list[float]:
@@ -57,7 +54,8 @@ def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, l
     total_duration_ticks = _beats_to_ticks(slide.duration, denominator)
     end_tick = start_tick + total_duration_ticks
     notes_out = [[start_tick, total_duration_ticks, slide.start.pitch, slide.start.velocity]]
-    values = _slide_pitch_bend_values(_target_value_at(slide.target), _target_steps(slide.target))
+    value_at, steps = _resolve_target(slide.target)
+    values = _slide_pitch_bend_values(value_at, steps)
     count = len(values)
     pitch_bends_out = [[start_tick, _pb_to_int(0.0)]]
     for j, value in enumerate(values, start=1):
