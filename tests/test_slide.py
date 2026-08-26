@@ -236,7 +236,7 @@ class TestSlideMul:
 class TestSlidePitchBendValues:
     def _values(self, value, steps):
         from propeller.serializer import _slide_pitch_bend_values
-        return _slide_pitch_bend_values(value, steps)
+        return _slide_pitch_bend_values(lambda p: value * p, steps)
 
     def test_t11_full_positive_range_produces_hundred_values(self):
         values = self._values(1.0, 0.01)
@@ -257,14 +257,15 @@ class TestSlidePitchBendValues:
         assert all(d <= 0.01 + 1e-9 for d in diffs)
 
     def test_t11_half_negative_range(self):
-        # briefing example: to(-0.5) at the default steps=0.01 -> 50 values
+        # event count is time-domain (round(1/steps)), independent of the
+        # target value's magnitude, so to(-0.5) at steps=0.01 -> 100 values
         values = self._values(-0.5, 0.01)
-        assert len(values) == 50
+        assert len(values) == 100
         assert values[-1] == pytest.approx(-0.5)
         assert all(v <= 0 for v in values)
 
     def test_t11_ac7_non_evenly_dividing_steps_rounds_to_nearest(self):
-        # steps=0.03 does not evenly divide 1.0; round(1.0/0.03) == 33
+        # steps=0.03 does not evenly divide 1.0; round(1/0.03) == 33
         values = self._values(1.0, 0.03)
         assert len(values) == 33
 
@@ -275,10 +276,27 @@ class TestSlidePitchBendValues:
     def test_t11_no_validation_error_on_non_dividing_steps(self):
         self._values(1.0, 0.3)  # must not raise
 
-    def test_t11_small_value_still_produces_at_least_one_event(self):
+    def test_t11_small_value_still_reaches_target_value(self):
+        # event count no longer scales with the target's magnitude, so a
+        # small target still gets the full time-domain sample count and
+        # still lands exactly on the target at the end.
         values = self._values(0.001, 0.01)
-        assert len(values) == 1
-        assert values[0] == pytest.approx(0.001)
+        assert len(values) == 100
+        assert values[-1] == pytest.approx(0.001)
+
+    def test_t11_out_of_range_values_are_clipped(self):
+        values = self._values(1.0, 0.01)
+        assert all(-1.0 <= v <= 1.0 for v in values)
+
+    def test_t11_curve_value_above_one_is_clipped_to_one(self):
+        from propeller.serializer import _slide_pitch_bend_values
+        values = _slide_pitch_bend_values(lambda p: 2.0, 1.0)
+        assert values == [1.0]
+
+    def test_t11_curve_value_below_negative_one_is_clipped_to_negative_one(self):
+        from propeller.serializer import _slide_pitch_bend_values
+        values = _slide_pitch_bend_values(lambda p: -2.0, 1.0)
+        assert values == [-1.0]
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +364,8 @@ class TestExpandSlide:
         s = Slide(D4, to(-0.5)) * 4
         _notes, pbs, _ticks = self._expand(s)
         # index 0 is the leading zero-reset; index 1 is the first ramp step
-        assert pbs[1][1] == _pb_to_int(-0.01)
+        # (progress 1/100 of the way through a target of -0.5)
+        assert pbs[1][1] == _pb_to_int(-0.5 * 0.01)
 
 
 # ---------------------------------------------------------------------------
@@ -452,11 +471,13 @@ class TestSlideSerialization:
         assert notes_out == [[0, 1920, 62, 100]]
 
     def test_t17_descending_example_pitch_bend_count(self):
+        # event count is time-domain (round(1/steps)), same as the ascending
+        # example, regardless of the target's magnitude
         from propeller.notes.Slide import to
         from propeller.notes import D4
         result = self._serialize(D4, to(-0.5))
         pbs = result['tracks'][0]['pitch-bends']
-        assert len(pbs) == 51
+        assert len(pbs) == 101
 
     def test_t17_descending_example_ramp_monotonic_decreasing(self):
         from propeller.notes.Slide import to

@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `propeller.notes.Slide.sin()`, `.cos()`, and `.gauss()` — new pitch-bend curve generators for `Slide`, alongside the existing `to()`, plus support for passing a plain custom `progress -> value` function directly as a `Slide`'s target.
+
+### Changed
+
+- `Slide`'s `to(value, steps)`, `sin`/`cos`/`gauss`, and custom functions now share one curve-sampling mechanism in the serializer: `steps` is the time-domain sampling interval (fraction of the slide's progress between pitch-bend events) rather than a value-domain increment, so the number of pitch-bend events `to()` emits no longer scales with `value`'s magnitude. Curve values outside `[-1.0, 1.0]` are clipped instead of raising.
+
 ## [0.7.0] — 2026-08-21
 
 ### Added
