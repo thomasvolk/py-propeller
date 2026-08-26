@@ -1,5 +1,8 @@
+from typing import Callable
+
 from propeller.errors import PropellerValidationError
 from propeller.notes import PitchBend, Rest, Slide
+from propeller.notes.Slide import DEFAULT_STEPS, SlideCurve, SlideTarget
 
 PPQN: int = 480
 
@@ -12,13 +15,26 @@ def _pb_to_int(value: float) -> int:
     return int(round((value + 1.0) / 2.0 * 16383))
 
 
-def _slide_pitch_bend_values(value: float, steps: float) -> list[float]:
-    """Evenly-spaced PitchBend values from (near) 0 up to value, in
-    increments no larger than steps when it divides evenly. The event count
-    is rounded to the nearest whole number when it doesn't (F-5), so the
-    actual increment can exceed steps in that case rather than raising."""
-    count = max(1, round(abs(value) / steps))
-    return [value * j / count for j in range(1, count + 1)]
+def _clip(value: float) -> float:
+    return max(-1.0, min(1.0, value))
+
+
+def _resolve_target(target) -> tuple[Callable[[float], float], float]:
+    """A Slide's target is either a SlideTarget/SlideCurve (which carry
+    their own value_at()/steps) or a bare custom progress -> value
+    function, which gets the default steps."""
+    if isinstance(target, (SlideTarget, SlideCurve)):
+        return target.value_at, target.steps
+    return target, DEFAULT_STEPS
+
+
+def _slide_pitch_bend_values(value_at, steps: float) -> list[float]:
+    """Evenly-spaced PitchBend values sampled from value_at(progress) at
+    progress = j/count for j in 1..count, where count = round(1/steps).
+    Each sampled value is clipped to the valid pitch-bend range
+    [-1.0, 1.0]."""
+    count = max(1, round(1 / steps))
+    return [_clip(value_at(j / count)) for j in range(1, count + 1)]
 
 
 def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, list, int]:
@@ -38,7 +54,8 @@ def _expand_slide(slide, start_tick: int, denominator: int = 4) -> tuple[list, l
     total_duration_ticks = _beats_to_ticks(slide.duration, denominator)
     end_tick = start_tick + total_duration_ticks
     notes_out = [[start_tick, total_duration_ticks, slide.start.pitch, slide.start.velocity]]
-    values = _slide_pitch_bend_values(slide.target.value, slide.target.steps)
+    value_at, steps = _resolve_target(slide.target)
+    values = _slide_pitch_bend_values(value_at, steps)
     count = len(values)
     pitch_bends_out = [[start_tick, _pb_to_int(0.0)]]
     for j, value in enumerate(values, start=1):

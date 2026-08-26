@@ -71,7 +71,7 @@ class Rest:
         return dataclasses.replace(self, duration=beats)
 
 
-from propeller.notes.Slide import Slide, SlideTarget, to  # noqa: E402
+from propeller.notes.Slide import Slide, SlideCurve, SlideTarget, cos, gauss, sin, to  # noqa: E402
 
 for _octave in range(9):
     for _semitone, _names in enumerate(_SEMITONES):
