@@ -4,7 +4,7 @@ from typing import Protocol, Union
 from propeller.errors import PropellerValidationError
 from propeller.notes import Note, Rest, Z
 
-__all__ = ['probability']
+__all__ = ['probability', 'selection']
 
 NoteLike = Union[Note, Rest]
 
@@ -32,3 +32,40 @@ def probability(p: float, note: NoteLike, *, replacement: NoteLike = Z, rng: Rng
     _require_note(note, 'note')
     _require_note(replacement, 'replacement')
     return note if rng.random() < p else replacement
+
+
+class _Selection:
+    def __init__(self, value):
+        self._value = value
+        self._branches: list[tuple[bool, object]] = []
+        self._default = None
+
+    def _compare(self, threshold, *, before: bool) -> bool:
+        try:
+            return self._value < threshold if before else self._value >= threshold
+        except TypeError as exc:
+            raise PropellerValidationError(
+                f'threshold must be comparable to the selection value, got {threshold!r}'
+            ) from exc
+
+    def before(self, threshold, value) -> '_Selection':
+        self._branches.append((self._compare(threshold, before=True), value))
+        return self
+
+    def after(self, threshold, value) -> '_Selection':
+        self._branches.append((self._compare(threshold, before=False), value))
+        return self
+
+    def default(self, value) -> '_Selection':
+        self._default = value
+        return self
+
+    def select(self):
+        for matched, value in self._branches:
+            if matched:
+                return value
+        return self._default
+
+
+def selection(value) -> _Selection:
+    return _Selection(value)

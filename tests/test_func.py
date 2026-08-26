@@ -1,6 +1,6 @@
 import pytest
 from propeller.errors import PropellerValidationError
-from propeller.func import probability
+from propeller.func import probability, selection
 from propeller.notes import Note, Rest, Z
 
 
@@ -90,3 +90,46 @@ class TestProbabilityValidation:
 
     def test_boundary_one_is_valid(self):
         probability(1.0, Note(60), rng=_FakeRng(0.5))
+
+
+class TestSelection:
+    def test_before_matches_strictly_less_than(self):
+        result = selection(4).before(5, 'a').after(5, 'b').select()
+        assert result == 'a'
+
+    def test_after_matches_greater_or_equal(self):
+        result = selection(5).before(5, 'a').after(5, 'b').select()
+        assert result == 'b'
+
+    def test_first_matching_condition_wins(self):
+        result = (
+            selection(20)
+            .after(5, 'a')
+            .after(6, 'b')
+            .after(20, 'c')
+            .select()
+        )
+        assert result == 'a'
+
+    def test_falls_back_to_default_when_nothing_matches(self):
+        result = selection(10).before(5, 'a').default('fallback').select()
+        assert result == 'fallback'
+
+    def test_returns_none_when_nothing_matches_and_no_default(self):
+        result = selection(10).before(5, 'a').select()
+        assert result is None
+
+    def test_value_can_be_any_type(self):
+        result = selection(3).before(5, [1, 2, 3]).select()
+        assert result == [1, 2, 3]
+
+    def test_incomparable_threshold_raises(self):
+        with pytest.raises(PropellerValidationError) as exc_info:
+            selection(3).before('not-a-number', 'a')
+        assert 'threshold' in str(exc_info.value)
+
+    def test_returns_self_for_chaining(self):
+        s = selection(1)
+        assert s.before(5, 'a') is s
+        assert s.after(5, 'b') is s
+        assert s.default('c') is s

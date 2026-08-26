@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-08-26
+
+### Added
+
+- New `propeller.func.selection(value)` — threshold-based value selection via `.before(threshold, value)` / `.after(threshold, value)` / `.default(value)` / `.select()`, returning the first matching branch's value (declared order, first match wins), the default if none match, or `None` if no default was set.
+- New example `examples/selection_example.py` demonstrating `selection()` driven by `propeller.loop.get_position().loop_count`.
+
+---
+
 ## [0.8.0] — 2026-08-26
 
 ### Added

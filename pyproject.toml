@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "py-propeller"
-version = "0.8.0"
+version = "0.8.1"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Thomas Volk", email = "info@thomasvolk.de"}]

@@ -272,6 +272,33 @@ probability(0.5, SnareDrum1)                          # 50/50 snare or rest
 
 The outcome is rolled once, when the script is evaluated — running it once via plain `python` freezes the choice for the whole playback. Run it with `py-propeller` (see Live setup below) to re-roll on every reload. See `examples/probability_example.py` for a full example.
 
+### Value-based selection
+
+`selection(value)` picks a value based on where `value` falls relative to a set of thresholds — useful for varying a part by loop count, tick, or any other comparable value:
+
+```python
+from propeller.func import selection
+from propeller.notes import C4, D4, E4, F4
+
+piano_line = (
+    selection(loop_count)
+    .before(5,  [C4, D4, E4, F4])
+    .after(5,   [C4, D4, E4, F4])
+    .after(6,   [C4, D4, D4, C4])
+    .after(20,  [C4, D4, E4, C4])
+    .default(   [C4, D4, E4, C4])
+    .select()
+)
+```
+
+- `.before(threshold, value)` matches when `value < threshold`
+- `.after(threshold, value)` matches when `value >= threshold`
+- Conditions are tested in the order they're declared and the *first* match wins — so a later, narrower condition (e.g. `.after(20, ...)` following `.after(5, ...)`) is only reachable if nothing earlier already matched
+- `.default(value)` is returned if nothing matches; if no default is set, `.select()` returns `None`
+- The threshold passed to `.before()`/`.after()` must be comparable to `value` (e.g. both numbers, or both dates) — an incomparable threshold raises `PropellerValidationError`
+
+`value` is a plain, already-resolved value (e.g. `loop.get_position().loop_count`), not a callable — for a value that changes over time, build a new `selection(...)` on each evaluation. See `examples/selection_example.py` for a full example.
+
 ### Transport configuration
 
 py-propeller connects to the engine via Unix domain socket at `/tmp/propeller.sock` by default. Override with an environment variable:
@@ -356,6 +383,7 @@ py-propeller examples/beat_example.py -n 250
 - Pitch bend support via `PB(value)` for expressive pitch modulation
 - Pitch-bend glide via `Slide(note, target)`, with linear (`to`), sine/cosine (`sin`/`cos`), gaussian (`gauss`), and custom curve shapes, and automatic consolidation of concurrent slides across lanes
 - Conditional/probabilistic notes via `probability(p, note, replacement=...)`
+- Threshold-based value selection via `selection(value).before(...).after(...).default(...).select()`
 - Validation at construction time with descriptive error messages
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
