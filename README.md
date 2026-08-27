@@ -326,6 +326,31 @@ print(f"loop_count: {p.loop_count}")
 
 See `examples/position_example.py` for a full example.
 
+### Reading engine status
+
+`propeller.status.get_status()` queries the engine for its current status:
+
+```python
+from propeller import status
+
+s = status.get_status()
+print(f"status: {s.status}")
+print(f"mode: {s.mode}")
+print(f"midi_port_name: {s.midi_port_name}")
+```
+
+- `status` — `"ok"` (a non-`"ok"` response raises `PropellerResponseError` before `get_status()` returns)
+- `mode` — `"standalone"`, `"clock"`, or `"sync"`
+- `bpm` — current tempo
+- `loop_duration` — total loop length in ticks, or `None` if no project is loaded
+- `clock_state` — `"started"` or `"stopped"`
+- `project_present` — whether a project is currently loaded
+- `midi_port_name` — connected MIDI output port name, or `None` if not connected
+- `sync_port_name` — connected sync port name, or `None` if not connected
+- `sync_clock_state` — `"waiting"`, `"tracking"`, or `"lost"`
+
+See `examples/status_example.py` for a full example.
+
 ### Playback lifecycle
 
 `project(...).play()` sends a `create-project` command followed by `loop-start` and then blocks. Pressing Ctrl+C sends `loop-stop` and exits cleanly.
@@ -388,6 +413,7 @@ py-propeller examples/beat_example.py -n 250
 - JSON serialization to the propeller-engine wire format (PPQN 480)
 - Unix socket transport with configurable path via `PROPELLER_SOCK`
 - `propeller.loop.get_position()` to read the engine's current tick, loop duration, and loop count
+- `propeller.status.get_status()` to read the engine's mode, tempo, clock state, and connected port names
 - Graceful Ctrl+C shutdown
 - Dry-run mode (`-n`) to print JSON payloads without connecting
 - Non-blocking mode (`-s active` / `-s inactive`) for scripted start/stop

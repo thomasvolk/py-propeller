@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-08-27
+
+### Added
+
+- New `propeller.status` module with `get_status()`, returning a `Status` dataclass (`status`, `mode`, `bpm`, `loop_duration`, `clock_state`, `project_present`, `midi_port_name`, `sync_port_name`, `sync_clock_state`); optional fields are `None` when absent.
+- New example `examples/status_example.py` demonstrating `status.get_status()`.
+
+---
+
 ## [0.8.1] — 2026-08-26
 
 ### Added
