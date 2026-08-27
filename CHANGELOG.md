@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-08-27
+
+### Changed
+
+- `selection(value)...select()` now resolves ties by *last* matching condition instead of first, so a later, narrower `.before()`/`.after()` condition overrides an earlier, broader one — matching the declared-order-as-override-cascade pattern the API was intended for. This is a breaking change for any chain relying on the previous first-match-wins behavior.
+
+---
+
 ## [0.8.3] — 2026-08-27
 
 ### Fixed

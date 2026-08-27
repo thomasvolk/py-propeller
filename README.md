@@ -293,7 +293,7 @@ piano_line = (
 
 - `.before(threshold, value)` matches when `value < threshold`
 - `.after(threshold, value)` matches when `value >= threshold`
-- Conditions are tested in the order they're declared and the *first* match wins — so a later, narrower condition (e.g. `.after(20, ...)` following `.after(5, ...)`) is only reachable if nothing earlier already matched
+- Conditions are tested in the order they're declared and the *last* match wins — so a later, narrower condition (e.g. `.after(20, ...)` following `.after(5, ...)`) overrides an earlier, broader one
 - `.default(value)` is returned if nothing matches; if no default is set, `.select()` returns `None`
 - The threshold passed to `.before()`/`.after()` must be comparable to `value` (e.g. both numbers, or both dates) — an incomparable threshold raises `PropellerValidationError`
 

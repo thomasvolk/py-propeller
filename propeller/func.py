@@ -61,10 +61,11 @@ class _Selection:
         return self
 
     def select(self):
+        result = self._default
         for matched, value in self._branches:
             if matched:
-                return value
-        return self._default
+                result = value
+        return result
 
 
 def selection(value) -> _Selection:

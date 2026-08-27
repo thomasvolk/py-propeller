@@ -101,7 +101,7 @@ class TestSelection:
         result = selection(5).before(5, 'a').after(5, 'b').select()
         assert result == 'b'
 
-    def test_first_matching_condition_wins(self):
+    def test_last_matching_condition_wins(self):
         result = (
             selection(20)
             .after(5, 'a')
@@ -109,7 +109,7 @@ class TestSelection:
             .after(20, 'c')
             .select()
         )
-        assert result == 'a'
+        assert result == 'c'
 
     def test_falls_back_to_default_when_nothing_matches(self):
         result = selection(10).before(5, 'a').default('fallback').select()
