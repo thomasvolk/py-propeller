@@ -347,7 +347,7 @@ print(f"midi_port_name: {s.midi_port_name}")
 - `project_present` — whether a project is currently loaded
 - `midi_port_name` — connected MIDI output port name, or `None` if not connected
 - `sync_port_name` — connected sync port name, or `None` if not connected
-- `sync_clock_state` — `"waiting"`, `"tracking"`, or `"lost"`
+- `sync_clock_state` — `"waiting"`, `"tracking"`, or `"lost"`, or `None` if not applicable
 
 See `examples/status_example.py` for a full example.
 

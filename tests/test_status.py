@@ -23,8 +23,7 @@ _FULL_RESPONSE = (
 
 _MINIMAL_RESPONSE = (
     b'{"status":"ok","mode":"standalone","bpm":120,'
-    b'"clock_state":"stopped","project_present":false,'
-    b'"sync_clock_state":"waiting"}'
+    b'"clock_state":"stopped","project_present":false}'
 )
 
 
@@ -69,6 +68,7 @@ class TestStatusResponse:
         assert status.loop_duration is None
         assert status.midi_port_name is None
         assert status.sync_port_name is None
+        assert status.sync_clock_state is None
 
 
 class TestStatusErrors:

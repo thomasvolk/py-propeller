@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-08-27
+
+### Fixed
+
+- `status.get_status()` no longer raises `KeyError` on engine responses that omit `"sync_clock_state"` (e.g. when sync is not in use) — the field is now `None` when absent, like `midi_port_name` and `sync_port_name`.
+
+---
+
 ## [0.8.2] — 2026-08-27
 
 ### Added

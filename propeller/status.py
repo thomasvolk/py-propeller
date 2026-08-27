@@ -14,7 +14,7 @@ class Status:
     project_present: bool
     midi_port_name: str | None
     sync_port_name: str | None
-    sync_clock_state: str
+    sync_clock_state: str | None
 
 
 def get_status() -> Status:
@@ -28,5 +28,5 @@ def get_status() -> Status:
         project_present=response['project_present'],
         midi_port_name=response.get('midi_port_name'),
         sync_port_name=response.get('sync_port_name'),
-        sync_clock_state=response['sync_clock_state'],
+        sync_clock_state=response.get('sync_clock_state'),
     )
