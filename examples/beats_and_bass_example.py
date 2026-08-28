@@ -1,23 +1,26 @@
+from propeller.notes.drums import BassDrum1, SnareDrum1, ClosedHihat, ClosedHihat
 from propeller.notes import C4, D4, E4, F2, D3, C3, Z
 from propeller import project, track
 from propeller import loop
+from propeller import status
+
+s = status.get_status()
+if s.midi_port_name == 'USB MIDI Interface':
+    # for volca drum in my personal setup
+    BassDrum1 = C4
+    SnareDrum1 = E4
+    ClosedHihat = D4
 
 p = loop.get_position()
-
-# Note definitions for Korg Volca Drum
-BD = C4
-HH = D4
-SN = E4
-R = Z
 
 if p.loop_count % 2 == 0:
     hh = []
 else:
     hh = [
-           HH * 0.5, HH * 0.5,
-           HH * 0.5, HH * 0.5,
-           HH * 0.5, HH * 0.5,
-           HH * 0.5, HH * 0.5,
+           ClosedHihat * 0.5, ClosedHihat * 0.5,
+           ClosedHihat * 0.5, ClosedHihat * 0.5,
+           ClosedHihat * 0.5, ClosedHihat * 0.5,
+           ClosedHihat * 0.5, ClosedHihat * 0.5,
           ] * 2
 
 p = project(
@@ -30,15 +33,15 @@ p = project(
               instrument=0,
               notes=[
               [
-                  BD *  1,
-                  SN *  1.5,
-                  BD *  0.5,
-                  SN *  0.5,
-                  BD *  0.5,
-                  BD *  1,
-                  SN *  1.5,
-                  BD *  0.5,
-                  BD *  1,
+                  BassDrum1 *  1,
+                  SnareDrum1 *  1.5,
+                  BassDrum1 *  0.5,
+                  SnareDrum1 *  0.5,
+                  BassDrum1 *  0.5,
+                  BassDrum1 *  1,
+                  SnareDrum1 *  1.5,
+                  BassDrum1 *  0.5,
+                  BassDrum1 *  1,
               ],
               hh
         ]),
@@ -50,7 +53,7 @@ p = project(
                   C3(100),
                   D3(100),
                   F2 * 1.5,
-                  R * 3.5]
+                  Z * 3.5]
         ),
     ],
 )
