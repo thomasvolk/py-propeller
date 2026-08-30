@@ -1,22 +1,20 @@
 import random
-from typing import Protocol, Union
+from typing import Protocol
 
 from propeller.errors import PropellerValidationError
-from propeller.notes import Note, Rest, Z
+from propeller.notes import Playable, Z
 
 __all__ = ['probability', 'selection']
-
-NoteLike = Union[Note, Rest]
 
 
 class Rng(Protocol):
     def random(self) -> float: ...
 
 
-def _require_note(value: NoteLike, name: str) -> None:
-    if not isinstance(value, (Note, Rest)):
+def _require_note(value: Playable, name: str) -> None:
+    if not isinstance(value, Playable):
         raise PropellerValidationError(
-            f'{name} must be a Note or Rest, got {value!r}'
+            f'{name} must be a Note, Rest, or Slide, got {value!r}'
         )
 
 
@@ -27,7 +25,7 @@ def _require_probability(p: float) -> None:
         )
 
 
-def probability(p: float, note: NoteLike, *, replacement: NoteLike = Z, rng: Rng = random) -> NoteLike:
+def probability(p: float, note: Playable, *, replacement: Playable = Z, rng: Rng = random) -> Playable:
     _require_probability(p)
     _require_note(note, 'note')
     _require_note(replacement, 'replacement')

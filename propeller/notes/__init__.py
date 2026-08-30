@@ -38,18 +38,23 @@ _SEMITONES: list[tuple[str, ...]] = [
 ]
 
 
-@dataclasses.dataclass(frozen=True)
-class Note:
-    pitch: int
-    duration: float = 1.0
-    velocity: int = 100
+class Playable:
+    """Shared base for duration-bearing, `* beats`-rescalable items (Note, Rest, Slide)."""
+    duration: float
 
-    def __mul__(self, beats: float) -> 'Note':
+    def __mul__(self, beats: float) -> 'Playable':
         if not isinstance(beats, (int, float)) or isinstance(beats, bool) or beats <= 0:
             raise PropellerValidationError(
                 f"duration must be a positive number, got {beats!r}"
             )
-        return dataclasses.replace(self, duration=beats)
+        return dataclasses.replace(self, duration=beats)  # type: ignore[type-var]
+
+
+@dataclasses.dataclass(frozen=True)
+class Note(Playable):
+    pitch: int
+    duration: float = 1.0
+    velocity: int = 100
 
     def __call__(self, velocity: int = 100) -> 'Note':
         if not (0 <= velocity <= 127):
@@ -60,15 +65,8 @@ class Note:
 
 
 @dataclasses.dataclass(frozen=True)
-class Rest:
+class Rest(Playable):
     duration: float = 1.0
-
-    def __mul__(self, beats: float) -> 'Rest':
-        if not isinstance(beats, (int, float)) or isinstance(beats, bool) or beats <= 0:
-            raise PropellerValidationError(
-                f"duration must be a positive number, got {beats!r}"
-            )
-        return dataclasses.replace(self, duration=beats)
 
 
 from propeller.notes.Slide import Slide, SlideCurve, SlideTarget, cos, gauss, sin, to  # noqa: E402

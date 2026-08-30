@@ -1,7 +1,7 @@
 import pytest
 from propeller.errors import PropellerValidationError
 from propeller.func import probability, selection
-from propeller.notes import Note, Rest, Z
+from propeller.notes import Note, Rest, Slide, Z, to
 
 
 class _FakeRng:
@@ -43,6 +43,25 @@ class TestProbabilityOutcome:
         n = Note(60)
         result = probability(0.0, n, rng=_FakeRng(0.0))
         assert result is Z
+
+
+class TestProbabilityAcceptsSlide:
+    def test_slide_below_threshold_returns_slide(self):
+        s = Slide(Note(60), to(1.0))
+        result = probability(0.5, s, rng=_FakeRng(0.0))
+        assert result is s
+
+    def test_slide_as_replacement(self):
+        n = Note(60)
+        s = Slide(Note(60), to(1.0))
+        result = probability(0.5, n, replacement=s, rng=_FakeRng(0.99))
+        assert result is s
+
+    def test_mul_applies_to_played_slide(self):
+        s = Slide(Note(60), to(1.0))
+        result = probability(0.5, s, rng=_FakeRng(0.0)) * 2.0
+        assert isinstance(result, Slide)
+        assert result.duration == 2.0
 
 
 class TestProbabilityComposability:

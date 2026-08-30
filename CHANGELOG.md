@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-30
+
+### Added
+
+- New `propeller.notes.Playable` — shared base class for `Note`, `Rest`, and `Slide`, consolidating their duration-rescaling `* beats` behavior.
+
+### Changed
+
+- `propeller.func.probability()` now accepts `Slide` in addition to `Note`/`Rest` for both the `note` and `replacement` arguments.
+
+---
+
 ## [0.8.4] — 2026-08-27
 
 ### Changed

@@ -3,7 +3,7 @@ import math
 from typing import Callable
 
 from propeller.errors import PropellerValidationError
-from . import Note, PitchBend, Rest
+from . import Note, Playable, PitchBend, Rest
 
 __all__: list[str] = ['to', 'sin', 'cos', 'gauss']
 
@@ -97,7 +97,7 @@ def gauss(u: float = 0.0, o: float = 1.0, steps: float = DEFAULT_STEPS) -> Slide
 
 
 @dataclasses.dataclass(frozen=True)
-class Slide:
+class Slide(Playable):
     start: Note
     target: SlideTarget | SlideCurve | Callable[[float], float]
     duration: float = 1.0
@@ -112,10 +112,3 @@ class Slide:
                 "target must be produced by to(...)/sin(...)/cos(...)/gauss(...), "
                 "or be a custom progress -> value function, e.g. Slide(C4, to(1.0))"
             )
-
-    def __mul__(self, beats: float) -> 'Slide':
-        if not isinstance(beats, (int, float)) or isinstance(beats, bool) or beats <= 0:
-            raise PropellerValidationError(
-                f"duration must be a positive number, got {beats!r}"
-            )
-        return dataclasses.replace(self, duration=beats)
