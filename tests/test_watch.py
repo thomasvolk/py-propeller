@@ -59,6 +59,34 @@ class TestArgParsing:
         with pytest.raises(SystemExit):
             _parse_args([str(missing)])
 
+    def test_default_state_is_active(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script)])
+        assert args.state == 'active'
+
+    def test_custom_state_via_s_flag(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script), '-s', 'sync'])
+        assert args.state == 'sync'
+
+    def test_inactive_state_via_s_flag(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script), '-s', 'inactive'])
+        assert args.state == 'inactive'
+
+    def test_invalid_state_rejected(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        with pytest.raises(SystemExit):
+            _parse_args([str(script), '-s', 'bogus'])
+
 
 # ---------------------------------------------------------------------------
 # _run_once: forces sys.argv to "-s active", restores it, isolates errors
@@ -79,6 +107,21 @@ class TestRunOnce:
             _run_once(script)
 
         assert seen_argv == [[script, '-s', 'active']]
+
+    def test_forwards_custom_state_argv(self, tmp_path):
+        from propeller.watch import _run_once
+        import sys
+        script = str(tmp_path / 'example.py')
+        seen_argv = []
+
+        def _capture_argv(*_args, **_kwargs):
+            seen_argv.append(list(sys.argv))
+
+        with mock.patch('propeller.watch.runpy') as mock_runpy:
+            mock_runpy.run_path.side_effect = _capture_argv
+            _run_once(script, 'sync')
+
+        assert seen_argv == [[script, '-s', 'sync']]
 
     def test_restores_original_argv_after(self, tmp_path):
         from propeller.watch import _run_once
@@ -157,7 +200,22 @@ class TestMainLoop:
                             main()
 
         assert mock_run_once.call_count == 2
-        mock_run_once.assert_called_with(str(script))
+        mock_run_once.assert_called_with(str(script), 'active')
+
+    def test_forwards_state_flag_to_run_once(self, tmp_path):
+        from propeller.watch import main
+        script = tmp_path / 'example.py'
+        script.write_text('')
+
+        with mock.patch('propeller.watch._run_once') as mock_run_once:
+            with mock.patch('propeller.watch.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('propeller.watch.PropellerClient'):
+                    with mock.patch('sys.argv', ['py-propeller', str(script), '-s', 'sync']):
+                        with pytest.raises(SystemExit):
+                            main()
+
+        mock_run_once.assert_called_with(str(script), 'sync')
 
     def test_sleeps_for_configured_interval(self, tmp_path):
         from propeller.watch import main

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-08-31
+
+### Added
+
+- `py-propeller` now accepts `-s <state>` (`active`, `sync`, or `inactive`), forwarding the chosen state into every re-evaluation instead of always hardcoding `-s active`. `py-propeller script -s sync` keeps watching and pushing project data on every tick without ever sending `loop-start`/`loop-stop`, so an external clock source can own transport during live composing.
+
+---
+
 ## [0.9.0] — 2026-08-30
 
 ### Added

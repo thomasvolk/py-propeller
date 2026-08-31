@@ -397,6 +397,15 @@ While it's running, open `beat_example.py` in your editor and save changes — t
 py-propeller examples/beat_example.py -n 250
 ```
 
+Pass `-s` with a state value, same as the underlying script's own `-s` flag, to change what gets pushed on every tick:
+
+```
+py-propeller examples/beat_example.py -s sync       # push project data only; let an external clock own transport
+py-propeller examples/beat_example.py -s inactive   # send loop-stop on every tick
+```
+
+`-s sync` is the common case for live composing against an external clock: every save keeps pushing the updated project data via `create-project`, but `py-propeller` never sends `loop-start`/`loop-stop`, leaving a DAW or hardware sequencer in full control of transport.
+
 `py-propeller` blocks until interrupted. A mid-save syntax or runtime error is printed to stderr without stopping the watcher — fix the file and the next tick picks it up. Press Ctrl+C to send `loop-stop` and exit.
 
 ## Features

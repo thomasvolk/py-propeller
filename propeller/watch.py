@@ -29,15 +29,23 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         '-n', dest='interval_ms', type=_positive_int, default=100, metavar='MS',
         help='Re-evaluation interval in milliseconds (default: 100).',
     )
+    parser.add_argument(
+        '-s', dest='state', choices=['active', 'sync', 'inactive'], default='active',
+        help=(
+            "State to push on every re-evaluation (default: active). "
+            "'sync' pushes project data only, leaving transport control to an "
+            "external clock source."
+        ),
+    )
     args = parser.parse_args(argv)
     if not os.path.isfile(args.script):
         parser.error(f'no such file: {args.script}')
     return args
 
 
-def _run_once(script: str) -> None:
+def _run_once(script: str, state: str = 'active') -> None:
     argv = sys.argv
-    sys.argv = [script, '-s', 'active']
+    sys.argv = [script, '-s', state]
     try:
         runpy.run_path(script, run_name='__main__')
     except SystemExit as exc:
@@ -54,7 +62,7 @@ def main() -> None:
 
     try:
         while True:
-            _run_once(args.script)
+            _run_once(args.script, args.state)
             time.sleep(args.interval_ms / 1000)
     except KeyboardInterrupt:
         try:
