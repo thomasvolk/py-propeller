@@ -260,7 +260,7 @@ Two concurrent slides in different lanes of the same track (a multi-lane `notes=
 
 ### Conditional notes
 
-`probability(p, note, replacement=Z)` resolves to `note` with probability `p` (`0.0`–`1.0`) and to `replacement` otherwise (a rest, `Z`, by default):
+`probability(p, note, replacement=Z)` resolves to `note` with probability `p` (`0.0`–`1.0`) and to `replacement` otherwise (a rest, `Z`, by default). Both `note` and `replacement` accept a `Note`, `Rest`, or `Slide`:
 
 ```python
 from propeller.notes.drums import SnareDrum1, HandClap
