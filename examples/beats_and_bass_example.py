@@ -5,7 +5,7 @@ from propeller import loop
 from propeller import status
 
 s = status.get_status()
-if s.midi_port_name == 'USB MIDI Interface':
+if s.midi_port_name is not None:
     # for volca drum in my personal setup
     BassDrum1 = C4
     SnareDrum1 = E4
