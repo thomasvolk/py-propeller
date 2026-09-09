@@ -8,7 +8,7 @@ from propeller.transport import PropellerClient
 class Status:
     status: str
     mode: str
-    bpm: int
+    bpm: int | None
     loop_duration: int | None
     clock_state: str
     project_present: bool
@@ -22,7 +22,7 @@ def get_status() -> Status:
     return Status(
         status=response['status'],
         mode=response['mode'],
-        bpm=response['bpm'],
+        bpm=response.get('bpm'),
         loop_duration=response.get('loop_duration'),
         clock_state=response['clock_state'],
         project_present=response['project_present'],

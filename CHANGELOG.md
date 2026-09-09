@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `status.get_status()` no longer raises `KeyError` on engine responses that omit `"bpm"` — the field is now `None` when absent, like `midi_port_name` and `sync_port_name`.
+
 ## [0.9.1] — 2026-08-31
 
 ### Added
