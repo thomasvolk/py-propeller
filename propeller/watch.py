@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 
+from propeller.errors import PropellerError
 from propeller.transport import PropellerClient
 
 
@@ -37,6 +38,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "external clock source."
         ),
     )
+    parser.add_argument(
+        '-c', '--clear', dest='clear', action='store_true',
+        help='Clear the active and pending project on the engine before starting the loop.',
+    )
     args = parser.parse_args(argv)
     if not os.path.isfile(args.script):
         parser.error(f'no such file: {args.script}')
@@ -59,6 +64,13 @@ def _run_once(script: str, state: str = 'active') -> None:
 
 def main() -> None:
     args = _parse_args(sys.argv[1:])
+
+    if args.clear:
+        try:
+            PropellerClient().send(json.dumps({'command': 'clear-project'}))
+        except PropellerError as e:
+            print(f'Failed to clear project: {e}', file=sys.stderr)
+            sys.exit(1)
 
     try:
         while True:

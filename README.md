@@ -406,6 +406,14 @@ py-propeller examples/beat_example.py -s inactive   # send loop-stop on every ti
 
 `-s sync` is the common case for live composing against an external clock: every save keeps pushing the updated project data via `create-project`, but `py-propeller` never sends `loop-start`/`loop-stop`, leaving a DAW or hardware sequencer in full control of transport.
 
+Pass `-c`/`--clear` to clear the engine's active and pending project before starting the loop:
+
+```
+py-propeller examples/beat_example.py -c
+```
+
+This sends `clear-project` once, up front, wiping any leftover project from a previous session so the watcher starts from a clean slate. If the clear fails (e.g. the engine isn't reachable), `py-propeller` prints the error and exits without starting the loop.
+
 `py-propeller` blocks until interrupted. A mid-save syntax or runtime error is printed to stderr without stopping the watcher — fix the file and the next tick picks it up. Press Ctrl+C to send `loop-stop` and exit.
 
 ## Features

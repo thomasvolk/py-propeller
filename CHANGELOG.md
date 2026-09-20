@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `py-propeller` now accepts `-c`/`--clear`, which sends the engine's `clear-project` command once before starting the loop, wiping any leftover active or pending project from a previous session. If the clear fails, `py-propeller` prints the error and exits without starting the loop.
+
 ## [0.10.0] — 2026-09-16
 
 ### Fixed

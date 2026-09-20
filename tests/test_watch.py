@@ -87,6 +87,27 @@ class TestArgParsing:
         with pytest.raises(SystemExit):
             _parse_args([str(script), '-s', 'bogus'])
 
+    def test_default_clear_is_false(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script)])
+        assert args.clear is False
+
+    def test_clear_via_c_flag(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script), '-c'])
+        assert args.clear is True
+
+    def test_clear_via_long_flag(self, tmp_path):
+        from propeller.watch import _parse_args
+        script = tmp_path / 'example.py'
+        script.write_text('')
+        args = _parse_args([str(script), '--clear'])
+        assert args.clear is True
+
 
 # ---------------------------------------------------------------------------
 # _run_once: forces sys.argv to "-s active", restores it, isolates errors
@@ -250,6 +271,61 @@ class TestMainLoop:
         assert exc_info.value.code == 0
         payload = json.loads(mock_instance.send.call_args[0][0])
         assert payload == {'command': 'loop-stop'}
+
+    def test_clear_not_sent_by_default(self, tmp_path):
+        from propeller.watch import main
+        script = tmp_path / 'example.py'
+        script.write_text('')
+
+        with mock.patch('propeller.watch._run_once'):
+            with mock.patch('propeller.watch.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                    mock_instance = mock.MagicMock()
+                    mock_client_cls.return_value = mock_instance
+                    with mock.patch('sys.argv', ['py-propeller', str(script)]):
+                        with pytest.raises(SystemExit):
+                            main()
+
+        payloads = [json.loads(call.args[0]) for call in mock_instance.send.call_args_list]
+        assert {'command': 'clear-project'} not in payloads
+
+    def test_clear_flag_sends_clear_project_before_loop(self, tmp_path):
+        from propeller.watch import main
+        script = tmp_path / 'example.py'
+        script.write_text('')
+
+        with mock.patch('propeller.watch._run_once') as mock_run_once:
+            with mock.patch('propeller.watch.time') as mock_time:
+                mock_time.sleep.side_effect = KeyboardInterrupt()
+                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                    mock_instance = mock.MagicMock()
+                    mock_client_cls.return_value = mock_instance
+                    with mock.patch('sys.argv', ['py-propeller', str(script), '-c']):
+                        with pytest.raises(SystemExit):
+                            main()
+
+        first_payload = json.loads(mock_instance.send.call_args_list[0].args[0])
+        assert first_payload == {'command': 'clear-project'}
+        mock_run_once.assert_called()
+
+    def test_clear_failure_aborts_before_loop_starts(self, tmp_path):
+        from propeller.watch import main
+        from propeller.errors import PropellerConnectionError
+        script = tmp_path / 'example.py'
+        script.write_text('')
+
+        with mock.patch('propeller.watch._run_once') as mock_run_once:
+            with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                mock_instance = mock.MagicMock()
+                mock_instance.send.side_effect = PropellerConnectionError('gone')
+                mock_client_cls.return_value = mock_instance
+                with mock.patch('sys.argv', ['py-propeller', str(script), '-c']):
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
+
+        assert exc_info.value.code == 1
+        mock_run_once.assert_not_called()
 
     def test_loop_stop_failure_suppressed(self, tmp_path):
         from propeller.watch import main
