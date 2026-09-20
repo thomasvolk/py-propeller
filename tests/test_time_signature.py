@@ -137,7 +137,7 @@ class TestPlayerDryRunMatchesSerializerUnderNonDefaultTimeSignature:
         t = StubTrack(name="Piano", channel=1, instrument=0, notes=[note])
         project = StubProject(bpm=120, time_signature=(8, 8), bars=1, tracks=[t])
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n']):
                 play(project)
 

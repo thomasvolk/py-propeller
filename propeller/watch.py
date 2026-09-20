@@ -1,13 +1,12 @@
 import argparse
-import json
 import os
 import runpy
 import sys
 import time
 import traceback
 
+from propeller import engine
 from propeller.errors import PropellerError
-from propeller.transport import PropellerClient
 
 
 def _positive_int(value: str) -> int:
@@ -67,7 +66,7 @@ def main() -> None:
 
     if args.clear:
         try:
-            PropellerClient().send(json.dumps({'command': 'clear-project'}))
+            engine.clear_project()
         except PropellerError as e:
             print(f'Failed to clear project: {e}', file=sys.stderr)
             sys.exit(1)
@@ -78,7 +77,7 @@ def main() -> None:
             time.sleep(args.interval_ms / 1000)
     except KeyboardInterrupt:
         try:
-            PropellerClient().send(json.dumps({'command': 'loop-stop'}))
+            engine.loop_stop()
         except Exception:
             pass
         sys.exit(0)

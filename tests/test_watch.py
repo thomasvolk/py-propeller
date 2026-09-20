@@ -215,7 +215,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once') as mock_run_once:
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = [None, KeyboardInterrupt()]
-                with mock.patch('propeller.watch.PropellerClient'):
+                with mock.patch('propeller.engine.PropellerClient'):
                     with mock.patch('sys.argv', ['py-propeller', str(script)]):
                         with pytest.raises(SystemExit):
                             main()
@@ -231,7 +231,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once') as mock_run_once:
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient'):
+                with mock.patch('propeller.engine.PropellerClient'):
                     with mock.patch('sys.argv', ['py-propeller', str(script), '-s', 'sync']):
                         with pytest.raises(SystemExit):
                             main()
@@ -246,7 +246,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once'):
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient'):
+                with mock.patch('propeller.engine.PropellerClient'):
                     with mock.patch('sys.argv', ['py-propeller', str(script), '-n', '250']):
                         with pytest.raises(SystemExit):
                             main()
@@ -261,7 +261,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once'):
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
                     mock_instance = mock.MagicMock()
                     mock_client_cls.return_value = mock_instance
                     with mock.patch('sys.argv', ['py-propeller', str(script)]):
@@ -280,7 +280,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once'):
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
                     mock_instance = mock.MagicMock()
                     mock_client_cls.return_value = mock_instance
                     with mock.patch('sys.argv', ['py-propeller', str(script)]):
@@ -298,7 +298,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once') as mock_run_once:
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
                     mock_instance = mock.MagicMock()
                     mock_client_cls.return_value = mock_instance
                     with mock.patch('sys.argv', ['py-propeller', str(script), '-c']):
@@ -316,7 +316,7 @@ class TestMainLoop:
         script.write_text('')
 
         with mock.patch('propeller.watch._run_once') as mock_run_once:
-            with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+            with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
                 mock_instance = mock.MagicMock()
                 mock_instance.send.side_effect = PropellerConnectionError('gone')
                 mock_client_cls.return_value = mock_instance
@@ -336,7 +336,7 @@ class TestMainLoop:
         with mock.patch('propeller.watch._run_once'):
             with mock.patch('propeller.watch.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
-                with mock.patch('propeller.watch.PropellerClient') as mock_client_cls:
+                with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
                     mock_instance = mock.MagicMock()
                     mock_instance.send.side_effect = PropellerConnectionError('gone')
                     mock_client_cls.return_value = mock_instance

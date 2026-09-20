@@ -36,7 +36,7 @@ class TestCreateProjectCommand:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             # make loop exit immediately
@@ -55,7 +55,7 @@ class TestCreateProjectCommand:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
@@ -76,7 +76,7 @@ class TestLoopStart:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
@@ -100,7 +100,7 @@ class TestCreateProjectError:
         from propeller.errors import PropellerResponseError
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = PropellerResponseError(code='bad_request')
             mock_client_cls.return_value = mock_instance
@@ -112,7 +112,7 @@ class TestCreateProjectError:
         from propeller.errors import PropellerResponseError
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = PropellerResponseError(code='bad_request')
             mock_client_cls.return_value = mock_instance
@@ -131,7 +131,7 @@ class TestBlockingLoop:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('propeller.player.time') as mock_time:
                 mock_time.sleep.side_effect = [None, KeyboardInterrupt()]
@@ -144,7 +144,7 @@ class TestBlockingLoop:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('propeller.player.time') as mock_time:
                 mock_time.sleep.side_effect = [KeyboardInterrupt()]
@@ -164,7 +164,7 @@ class TestKeyboardInterruptShutdown:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('propeller.player.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
@@ -177,7 +177,7 @@ class TestKeyboardInterruptShutdown:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
@@ -202,7 +202,7 @@ class TestLoopStopFailureSuppressed:
 
         send_calls = [None, None, PropellerConnectionError('engine gone')]
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = send_calls
             mock_client_cls.return_value = mock_instance
@@ -220,7 +220,7 @@ class TestLoopStopFailureSuppressed:
 
         send_calls = [None, None, PropellerConnectionError('engine gone')]
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = send_calls
             mock_client_cls.return_value = mock_instance
@@ -238,7 +238,7 @@ class TestLoopStopFailureSuppressed:
 
         send_calls = [None, None, PropellerConnectionError('engine gone')]
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = send_calls
             mock_client_cls.return_value = mock_instance
@@ -261,7 +261,7 @@ class TestConnectionErrorPropagates:
         from propeller.errors import PropellerConnectionError
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = PropellerConnectionError('no socket')
             mock_client_cls.return_value = mock_instance
@@ -273,7 +273,7 @@ class TestConnectionErrorPropagates:
         from propeller.errors import PropellerConnectionError
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_instance.send.side_effect = PropellerConnectionError('no socket')
             mock_client_cls.return_value = mock_instance
@@ -326,7 +326,7 @@ class TestDryRun:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n']):
                 play(project)
 
@@ -341,7 +341,7 @@ class TestDryRun:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n']):
                 play(project)
 
@@ -351,7 +351,7 @@ class TestDryRun:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient'):
+        with mock.patch('propeller.engine.PropellerClient'):
             with mock.patch('propeller.player.time') as mock_time:
                 with mock.patch('sys.argv', ['script.py', '-n']):
                     play(project)
@@ -362,7 +362,7 @@ class TestDryRun:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('propeller.player.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
@@ -382,7 +382,7 @@ class TestStateInactive:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('sys.argv', ['script.py', '-s', 'inactive']):
@@ -398,7 +398,7 @@ class TestStateInactive:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('sys.argv', ['script.py', '-s', 'inactive']):
                 with pytest.raises(SystemExit) as exc_info:
@@ -410,7 +410,7 @@ class TestStateInactive:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.serialize') as mock_serialize:
@@ -430,9 +430,9 @@ class TestStateActiveNoProject:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': False}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'stopped', 'project_present': False}
             mock_client_cls.return_value = mock_instance
             with mock.patch('sys.argv', ['script.py', '-s', 'active']):
                 with pytest.raises(SystemExit):
@@ -451,9 +451,9 @@ class TestStateActiveNoProject:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': False}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'stopped', 'project_present': False}
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
                 with mock.patch('sys.argv', ['script.py', '-s', 'active']):
@@ -473,9 +473,9 @@ class TestStateActiveWithProject:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': True}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'started', 'project_present': True}
             mock_client_cls.return_value = mock_instance
             with mock.patch('sys.argv', ['script.py', '-s', 'active']):
                 with pytest.raises(SystemExit):
@@ -494,18 +494,18 @@ class TestStateActiveWithProject:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
 
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': False}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'stopped', 'project_present': False}
             with mock.patch('sys.argv', ['script.py', '-s', 'active']):
                 with pytest.raises(SystemExit):
                     play(project)
             create_payload = json.loads(mock_instance.send.call_args_list[0][0][0])
 
             mock_instance.reset_mock()
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': True}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'started', 'project_present': True}
             with mock.patch('sys.argv', ['script.py', '-s', 'active']):
                 with pytest.raises(SystemExit):
                     play(project)
@@ -519,9 +519,9 @@ class TestStateActiveWithProject:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
-            mock_instance.query.return_value = {'status': 'ok', 'project_present': True}
+            mock_instance.query.return_value = {'status': 'ok', 'mode': 'standalone', 'clock_state': 'started', 'project_present': True}
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
                 with mock.patch('sys.argv', ['script.py', '-s', 'active']):
@@ -541,7 +541,7 @@ class TestDryRunPrecedenceOverStateActive:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n', '-s', 'active']):
                 play(project)
 
@@ -563,7 +563,7 @@ class TestDryRunPrecedenceOverStateInactive:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n', '-s', 'inactive']):
                 play(project)
 
@@ -585,7 +585,7 @@ class TestStateSync:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
@@ -605,7 +605,7 @@ class TestStateSync:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_instance = mock.MagicMock()
             mock_client_cls.return_value = mock_instance
             with mock.patch('propeller.player.time') as mock_time:
@@ -623,7 +623,7 @@ class TestStateSync:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             mock_client_cls.return_value = mock.MagicMock()
             with mock.patch('propeller.player.time') as mock_time:
                 mock_time.sleep.side_effect = KeyboardInterrupt()
@@ -644,7 +644,7 @@ class TestDryRunPrecedenceOverStateSync:
         from propeller.player import play
         project = _make_stub_project()
 
-        with mock.patch('propeller.player.PropellerClient') as mock_client_cls:
+        with mock.patch('propeller.engine.PropellerClient') as mock_client_cls:
             with mock.patch('sys.argv', ['script.py', '-n', '-s', 'sync']):
                 play(project)
 
